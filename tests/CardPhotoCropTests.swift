@@ -276,7 +276,7 @@ final class FrameKitDesignSnapshotTests: XCTestCase {
     func testSingleHomeRoutesAndCreatorAtPhoneSize() async throws {
         let scene = try XCTUnwrap(UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }.first)
         let previous = scene.windows.first(where: \.isKeyWindow)
-        let model = AppViewModel()
+        let model = AppViewModel(libraryDirectory: FileManager.default.temporaryDirectory.appendingPathComponent("SnapshotLibrary-" + UUID().uuidString))
         let window = UIWindow(windowScene: scene)
         window.frame = CGRect(x: 0, y: 0, width: 393, height: 852)
         window.overrideUserInterfaceStyle = .dark
@@ -284,7 +284,7 @@ final class FrameKitDesignSnapshotTests: XCTestCase {
 
         let routes: [(String, FrameKitDestination?)] = [
             ("Home", nil), ("Connection", .connection), ("Themes", .themes),
-            ("Wallpapers", .wallpapers), ("Wallet", .wallet)
+            ("Wallpapers", .wallpapers), ("Wallet", .wallet), ("Empty library", .library)
         ]
         for (name, route) in routes {
             let host = mount(route, model: model, window: window)
@@ -315,6 +315,21 @@ final class FrameKitDesignSnapshotTests: XCTestCase {
         model.loadedTheme = PasscodeThemeInfo(name: "Preview theme", filePath: "", fileCount: 10, keysPreview: keys)
         host = mount(.themes, model: model, window: window)
         try await capture("Imported theme", host: host, window: window)
+        let archive = try PasscodeThemePackager.buildPassthm(keys: keys)
+        model.themeLibrary = try await model.themeLibraryStorage.save(data: archive, name: "Синий минимализм", keyCount: 10, thumbnail: ThemeArtwork.thumbnail(keys))
+        host = mount(.library, model: model, window: window)
+        try await capture("Saved library", host: host, window: window)
+        model.passcodeMode = .themeCreator; model.sliceMode = .individualKeys; model.customKeys = keys
+        model.editorBackground = .black; model.editorCornerRadius = 0.3
+        host = mount(.themes, model: model, window: window)
+        try await capture("Styled creator", host: host, window: window)
+        let preflight = UIHostingController(rootView: ApplyPreflightSheet(target: .themes).environmentObject(model))
+        window.rootViewController = preflight
+        try await capture("Preflight blockers", host: preflight, window: window)
+        let detail = UIHostingController(rootView: TendieDetailSheet(item: TendieItem(name: "Пример обоев", fileName: "preview.tendies", relativePath: "preview.tendies" )).preferredColorScheme(.dark))
+        window.rootViewController = detail
+        try await capture("Wallpaper metadata", host: detail, window: window)
+        try? FileManager.default.removeItem(at: model.themeLibraryStorage.directory)
     }
 
     private func mount(_ route: FrameKitDestination?, model: AppViewModel, window: UIWindow) -> UIViewController {
@@ -378,5 +393,85 @@ final class FrameKitDesignSnapshotTests: XCTestCase {
            scroll.bounds.height > 150,
            scroll.contentSize.height + scroll.adjustedContentInset.top + scroll.adjustedContentInset.bottom > scroll.bounds.height + 8 { return scroll }
         return view.subviews.lazy.compactMap { self.verticalScroll(in: $0) }.first
+    }
+}
+
+@MainActor
+final class FrameKitFeatureTests: XCTestCase {
+    private func directory() -> URL { FileManager.default.temporaryDirectory.appendingPathComponent("FeatureTests-" + UUID().uuidString) }
+    private func keys() -> [String: UIImage] {
+        Dictionary(uniqueKeysWithValues: (0...9).map { digit in
+            (String(digit), UIGraphicsImageRenderer(size: CGSize(width: 64, height: 64)).image { context in
+                UIColor.systemBlue.setFill(); context.fill(CGRect(x: 0, y: 0, width: 64, height: 64))
+            })
+        })
+    }
+    func testLibraryPersistsDeduplicatesRenamesFavoritesAndDeletes() async throws {
+        let dir = directory(); defer { try? FileManager.default.removeItem(at: dir) }
+        let store = ThemeLibraryStorage(directory: dir)
+        let data = try PasscodeThemePackager.buildPassthm(keys: keys())
+        var rows = try await store.save(data: data, name: "  My theme  ", keyCount: 10, thumbnail: ThemeArtwork.thumbnail(keys()))
+        let entry = try XCTUnwrap(rows.first)
+        XCTAssertEqual(entry.name, "My theme")
+        XCTAssertTrue(FileManager.default.fileExists(atPath: store.archive(entry.id).path))
+        XCTAssertEqual(PasscodeThemeReader.inspect(url: store.archive(entry.id))?.0.count, 10)
+        rows = try await store.rename(entry.id, name: "New name")
+        rows = try await store.favorite(entry.id)
+        rows = try await store.save(data: data, name: "Do not overwrite name", keyCount: 10, thumbnail: nil)
+        XCTAssertEqual(rows.count, 1); XCTAssertEqual(rows.first?.name, "New name"); XCTAssertEqual(rows.first?.favorite, true)
+        let reloaded = try await ThemeLibraryStorage(directory: dir).list()
+        XCTAssertEqual(reloaded.first?.id, entry.id)
+        rows = try await store.delete(entry.id)
+        XCTAssertTrue(rows.isEmpty); XCTAssertFalse(FileManager.default.fileExists(atPath: store.archive(entry.id).path))
+    }
+    func testCorruptManifestIsNotSilentlyOverwritten() async throws {
+        let dir = directory(); defer { try? FileManager.default.removeItem(at: dir) }
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        let url = dir.appendingPathComponent("library.json"), original = Data("broken manifest".utf8)
+        try original.write(to: url)
+        do { _ = try await ThemeLibraryStorage(directory: dir).save(data: Data([1]), name: "No", keyCount: 1, thumbnail: nil); XCTFail("Must not replace corrupt manifest") } catch {}
+        XCTAssertEqual(try Data(contentsOf: url), original)
+    }
+    func testPreflightBlocksEveryMissingPrerequisiteAndAllowsPartialWarning() {
+        let ready = PreflightSnapshot(wifi: true, vpn: true, pairing: true, content: true, files: true)
+        XCTAssertTrue(ready.canApply)
+        for i in 0..<5 {
+            var value = ready
+            switch i { case 0: value.wifi = false; case 1: value.vpn = false; case 2: value.pairing = false; case 3: value.content = false; default: value.files = false }
+            XCTAssertFalse(value.canApply)
+        }
+        var partial = ready; partial.partial = true; partial.unsafe = true
+        XCTAssertTrue(partial.canApply); XCTAssertEqual(partial.checks.filter { $0.warning }.count, 2)
+    }
+    func testDecoratedEditorMaintainsPixelsAndCachesWithoutChangingOriginal() throws {
+        let dir = directory(); defer { try? FileManager.default.removeItem(at: dir) }
+        let model = AppViewModel(libraryDirectory: dir)
+        model.sliceMode = .individualKeys; model.customKeys = keys()
+        let original = try XCTUnwrap(model.customKeys["0"])
+        XCTAssertTrue(model.effectiveKeys["0"] === original)
+        model.editorBackground = .black; model.editorCornerRadius = 0.5
+        let decorated = try XCTUnwrap(model.effectiveKeys["0"])
+        XCTAssertEqual(decorated.size, CGSize(width: original.size.width * original.scale, height: original.size.height * original.scale))
+        XCTAssertTrue(model.effectiveKeys["0"] === decorated)
+        XCTAssertTrue(model.customKeys["0"] === original)
+        let archive = try PasscodeThemePackager.buildPassthm(keys: model.effectiveKeys)
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString + ".passthm")
+        defer { try? FileManager.default.removeItem(at: url) }; try archive.write(to: url)
+        XCTAssertEqual(PasscodeThemeReader.inspect(url: url)?.0.count, 10)
+        model.editorCornerRadius = 0; model.editorBackground = .original
+        XCTAssertTrue(model.effectiveKeys["0"] === original)
+    }
+    func testOldWallpaperDataDecodesWithoutVideoProperty() throws {
+        let item = TendieItem(name: "Old", fileName: "old.tendies", relativePath: "old.tendies")
+        var json = try XCTUnwrap(JSONSerialization.jsonObject(with: JSONEncoder().encode(item)) as? [String: Any])
+        json.removeValue(forKey: "previewVideoFileName")
+        let decoded = try JSONDecoder().decode(TendieItem.self, from: JSONSerialization.data(withJSONObject: json))
+        XCTAssertNil(decoded.previewVideoFileName); XCTAssertNil(decoded.previewVideoURL)
+    }
+    func testEmptyWallpaperFolderDoesNotInventAnimation() async throws {
+        let dir = directory(); try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let preview = await WallpaperMoviePreview.extract(from: dir)
+        XCTAssertNil(preview.0); XCTAssertNil(preview.1)
     }
 }
