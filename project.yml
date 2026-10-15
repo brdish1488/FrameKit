@@ -8,8 +8,8 @@ options:
 settings:
   base:
     SWIFT_VERSION: "5.0"
-    MARKETING_VERSION: "1.3.4"
-    CURRENT_PROJECT_VERSION: "3"
+    MARKETING_VERSION: "1.3.5"
+    CURRENT_PROJECT_VERSION: "4"
     TARGETED_DEVICE_FAMILY: "1"
     # AirliftFFI is arm64-only (aws-lc-rs / idevice); drop x86_64 simulator slice.
     EXCLUDED_ARCHS[sdk=iphonesimulator*]: x86_64
@@ -28,6 +28,7 @@ targets:
     settings:
       base:
         PRODUCT_NAME: "FrameKit"
+        PRODUCT_MODULE_NAME: AirCard_iOS
         PRODUCT_BUNDLE_IDENTIFIER: com.brdish.framekit
         INFOPLIST_FILE: ios-app/Info.plist
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
