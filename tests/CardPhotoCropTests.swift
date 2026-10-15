@@ -329,6 +329,22 @@ final class FrameKitDesignSnapshotTests: XCTestCase {
         let detail = UIHostingController(rootView: TendieDetailSheet(item: TendieItem(name: "Пример обоев", fileName: "preview.tendies", relativePath: "preview.tendies" )).preferredColorScheme(.dark))
         window.rootViewController = detail
         try await capture("Wallpaper metadata", host: detail, window: window)
+        let appearance = UIHostingController(rootView: NavigationStack {
+            Form {
+                CreatorAppearanceSection()
+                Section("Превью оформления") { KeypadPreviewView(keys: model.effectiveKeys).listRowInsets(EdgeInsets(top: 6, leading: 6, bottom: 6, trailing: 6)).listRowBackground(Color.clear) }
+            }.modifier(FrameKitFormStyle()).navigationTitle("Оформление кнопок")
+        }.environmentObject(model).preferredColorScheme(.dark).tint(FrameKitStyle.blue))
+        window.rootViewController = appearance
+        try await capture("Editor appearance controls", host: appearance, window: window)
+        let diagnostics = UIHostingController(rootView: NavigationStack {
+            Form {
+                Section("Ход операции") { OperationStatusView(stage: "Применение остановлено", busy: false, error: "Проверь VPN, сопряжение и совместимость iOS. Подробности — в журнале.") }
+                Section("Чтение файла") { OperationStatusView(stage: "Чтение изображений кнопок…", busy: true, error: nil) }
+            }.modifier(FrameKitFormStyle()).navigationTitle("Состояние операции")
+        }.preferredColorScheme(.dark).tint(FrameKitStyle.blue))
+        window.rootViewController = diagnostics
+        try await capture("Operation diagnostics", host: diagnostics, window: window)
         try? FileManager.default.removeItem(at: model.themeLibraryStorage.directory)
     }
 
