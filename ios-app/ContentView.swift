@@ -30,7 +30,7 @@ struct CreditsSheet: View {
     @Environment(\.dismiss) private var dismiss
 
     private var version: String {
-        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.3.3"
+        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.3.4"
     }
 
     var body: some View {
@@ -386,6 +386,46 @@ struct DocumentPickerView: UIViewControllerRepresentable {
         func documentPickerWasCancelled(_ controller: UIDocumentPickerViewController) {
             parent.dismiss()
         }
+    }
+}
+
+// MARK: - Passcode Archive Picker
+
+struct PassthmDocumentPickerView: UIViewControllerRepresentable {
+    let onPick: (URL) -> Void
+    let onFailure: (String) -> Void
+    @Environment(\.dismiss) private var dismiss
+
+    func makeUIViewController(context: Context) -> UIDocumentPickerViewController {
+        var types: [UTType] = [.item, .data, .archive, .zip]
+        if let type = UTType("com.aircard.passthm") { types.append(type) }
+        if let type = UTType(filenameExtension: "passthm") { types.append(type) }
+        let picker = UIDocumentPickerViewController(forOpeningContentTypes: types, asCopy: true)
+        picker.delegate = context.coordinator
+        // Explicit confirmation, matching the wallpaper picker. Import one theme per operation.
+        picker.allowsMultipleSelection = true
+        return picker
+    }
+
+    func updateUIViewController(_ controller: UIDocumentPickerViewController, context: Context) {}
+    func makeCoordinator() -> Coordinator { Coordinator(self) }
+
+    final class Coordinator: NSObject, UIDocumentPickerDelegate {
+        let parent: PassthmDocumentPickerView
+        init(_ parent: PassthmDocumentPickerView) { self.parent = parent }
+        func documentPicker(_ controller: UIDocumentPickerViewController, didPickDocumentsAt urls: [URL]) {
+            defer { parent.dismiss() }
+            guard urls.count == 1, let url = urls.first else {
+                parent.onFailure("Choose exactly one .passthm theme, then tap Open.")
+                return
+            }
+            guard ["passthm", "zip"].contains(url.pathExtension.lowercased()) else {
+                parent.onFailure("This is not a .passthm theme. Select the original .passthm archive (or its ZIP archive), not an image or a wallpaper.")
+                return
+            }
+            parent.onPick(url)
+        }
+        func documentPickerWasCancelled(_ controller: UIDocumentPickerViewController) { parent.dismiss() }
     }
 }
 
@@ -1643,14 +1683,31 @@ struct ApplyThemeSection: View {
                     .buttonStyle(.borderless)
                 }
             }
+            .disabled(vm.isImportingTheme)
             .sheet(isPresented: $showDocumentPicker) {
-                DocumentPickerView(allowedContentTypes: [
-                    UTType(filenameExtension: "passthm") ?? .archive,
-                    UTType.zip,
-                    UTType.archive
-                ]) { url in
+                PassthmDocumentPickerView(onPick: { url in
                     vm.loadPassthm(url: url)
-                }
+                }, onFailure: { message in
+                    vm.themeImportError = message
+                    vm.themeImportStatus = ""
+                })
+            }
+
+            Text("Select one .passthm file and tap Open. No pairing is required just to import a theme.")
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+            if vm.isImportingTheme {
+                ProgressView("Reading theme…")
+            } else if !vm.themeImportStatus.isEmpty {
+                Label(vm.themeImportStatus, systemImage: "checkmark.circle")
+                    .font(.footnote)
+                    .foregroundStyle(.green)
+            }
+            if let message = vm.themeImportError {
+                Label(message, systemImage: "exclamationmark.triangle")
+                    .font(.footnote)
+                    .foregroundStyle(.red)
+                    .textSelection(.enabled)
             }
         }
 

@@ -50,6 +50,11 @@ final class AppViewModel: ObservableObject {
     // MARK: - Passcode Themes tab
     @Published var passcodeMode: CreatorMode = .applyTheme
     @Published var loadedTheme: PasscodeThemeInfo? = nil
+    @Published var isImportingTheme = false
+    @Published var themeImportError: String? = nil
+    @Published var themeImportStatus = ""
+    private var themeImportGeneration = UUID()
+    private var importedThemeDirectory: URL? = nil
     @Published var documentsThemes: [String] = []
     @Published var sliceMode: SliceMode = .posterSlice
 
@@ -947,19 +952,68 @@ final class AppViewModel: ObservableObject {
     // MARK: - Passthm Load
 
     func loadPassthm(url: URL) {
-        Task.detached {
-            let result = PasscodeThemeReader.inspect(url: url)
+        guard !isImportingTheme else { return }
+        themeImportError = nil
+        themeImportStatus = ""
+        guard ["passthm", "zip"].contains(url.pathExtension.lowercased()) else {
+            themeImportError = "Select a .passthm theme or a ZIP theme archive."
+            return
+        }
+        let generation = UUID()
+        themeImportGeneration = generation
+        isImportingTheme = true
+        let directory = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("framekit_theme_\(UUID().uuidString)", isDirectory: true)
+        let localURL = directory.appendingPathComponent(url.lastPathComponent)
+        let scope = url.startAccessingSecurityScopedResource()
+        defer { if scope { url.stopAccessingSecurityScopedResource() } }
+        do {
+            try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+            var coordinationError: NSError?
+            var copyError: Error?
+            NSFileCoordinator().coordinate(readingItemAt: url, options: [], error: &coordinationError) { readableURL in
+                do { try FileManager.default.copyItem(at: readableURL, to: localURL) }
+                catch { copyError = error }
+            }
+            if let error = coordinationError { throw error }
+            if let error = copyError { throw error }
+            let attributes = try FileManager.default.attributesOfItem(atPath: localURL.path)
+            guard let size = attributes[.size] as? NSNumber, size.int64Value > 0 else {
+                throw NSError(domain: "FrameKit.ThemeImport", code: 1,
+                              userInfo: [NSLocalizedDescriptionKey: "The selected theme file is empty."])
+            }
+        } catch {
+            try? FileManager.default.removeItem(at: directory)
+            isImportingTheme = false
+            themeImportError = "Could not copy \(url.lastPathComponent): \(error.localizedDescription). Download the file in Files first, then try again."
+            return
+        }
+
+        // Work only with our own stable copy, never a picker/provider URL after dismissal.
+        Task.detached { [weak self] in
+            let result = PasscodeThemeReader.inspect(url: localURL)
             await MainActor.run {
+                guard let self = self, self.themeImportGeneration == generation else {
+                    try? FileManager.default.removeItem(at: directory)
+                    return
+                }
+                self.isImportingTheme = false
                 if let (keys, rawData, count) = result {
+                    if let previous = self.importedThemeDirectory {
+                        try? FileManager.default.removeItem(at: previous)
+                    }
+                    self.importedThemeDirectory = directory
                     self.loadedTheme = PasscodeThemeInfo(
-                        name: url.deletingPathExtension().lastPathComponent,
-                        filePath: url.path,
+                        name: localURL.deletingPathExtension().lastPathComponent,
+                        filePath: localURL.path,
                         fileCount: count,
                         keysPreview: keys,
                         rawKeyData: rawData
                     )
+                    self.themeImportStatus = "Imported \(localURL.lastPathComponent) — \(keys.count) keys."
                 } else {
-                    self.errorMessage = "Failed to read .passthm — invalid or unsupported format."
+                    try? FileManager.default.removeItem(at: directory)
+                    self.themeImportError = "Could not read \(localURL.lastPathComponent). The archive may be damaged or use an unsupported layout: a theme must contain readable digit-button images."
                 }
             }
         }
@@ -972,6 +1026,14 @@ final class AppViewModel: ObservableObject {
     }
 
     func clearLoadedTheme() {
+        themeImportGeneration = UUID()
+        isImportingTheme = false
+        themeImportError = nil
+        themeImportStatus = ""
+        if let directory = importedThemeDirectory {
+            try? FileManager.default.removeItem(at: directory)
+        }
+        importedThemeDirectory = nil
         loadedTheme = nil
         passthmFlashPhase = .idle
         passthmFlashProgress = 0
