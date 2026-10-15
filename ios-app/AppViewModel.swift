@@ -984,14 +984,13 @@ final class AppViewModel: ObservableObject {
             defer { if scope { url.stopAccessingSecurityScopedResource() } }
             do {
                 try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-                var coordinationError: NSError?
-                var copyError: Error?
-                NSFileCoordinator().coordinate(readingItemAt: url, options: [], error: &coordinationError) { readableURL in
-                    do { try FileManager.default.copyItem(at: readableURL, to: localURL) }
-                    catch { copyError = error }
+                // Match TendiesEngine's proven local-copy path, including its data fallback.
+                do {
+                    try FileManager.default.copyItem(at: url, to: localURL)
+                } catch {
+                    let data = try Data(contentsOf: url)
+                    try data.write(to: localURL, options: .atomic)
                 }
-                if let error = coordinationError { throw error }
-                if let error = copyError { throw error }
                 let attrs = try FileManager.default.attributesOfItem(atPath: localURL.path)
                 guard let size = attrs[.size] as? NSNumber, size.int64Value > 0 else {
                     throw NSError(domain: "FrameKit.ThemeImport", code: 1,

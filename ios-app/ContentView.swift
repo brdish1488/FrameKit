@@ -30,7 +30,7 @@ struct CreditsSheet: View {
     @Environment(\.dismiss) private var dismiss
 
     private var version: String {
-        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.3.5"
+        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.3.6"
     }
 
     var body: some View {
@@ -1566,7 +1566,7 @@ struct PasscodeThemeTab: View {
                     ThemeCreatorSection()
                 }
 
-                Section("Theme import • FrameKit 1.3.5 (4)") {
+                Section("Theme import • FrameKit 1.3.6 (5)") {
                     if vm.isImportingTheme {
                         ProgressView("Reading theme…")
                     }
@@ -1617,19 +1617,11 @@ struct PasscodeThemeTab: View {
             .sheet(isPresented: $showCredits) {
                 CreditsSheet()
             }
-            .fileImporter(isPresented: $showThemeFileImporter,
-                          allowedContentTypes: [.item], allowsMultipleSelection: true) { result in
-                switch result {
-                case .success(let urls):
+            .sheet(isPresented: $showThemeFileImporter) {
+                // Exactly the working wallpaper picker: same UIKit controller,
+                // asCopy setting, selection mode, content types and delegate.
+                TendiesDocumentPickerView { urls in
                     vm.importPasscodeSelection(urls)
-                case .failure(let error):
-                    let cocoa = error as NSError
-                    if cocoa.domain == NSCocoaErrorDomain && cocoa.code == NSUserCancelledError {
-                        vm.themeImportStatus = "Import cancelled."
-                    } else {
-                        vm.themeImportStatus = "The file picker reported an error."
-                        vm.themeImportError = error.localizedDescription
-                    }
                 }
             }
             .onAppear { vm.scanDocumentsDirectory() }
