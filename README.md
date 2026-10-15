@@ -99,3 +99,9 @@ FrameKit — независимый форк [AirCard-iOS](https://github.com/Ma
 - Лёгкое нажатие карточек с учётом Reduce Motion и отключаемый виброотклик в «О FrameKit».
 
 Системный движок и механизм UIKit-импорта сохранены. Восстановление системных файлов и гарантия безопасности применения не заявляются. MIT attribution remains intact.
+
+## FrameKit 1.5.1 (9) — compact interface
+
+Presentation-only update: compact native home list, monochrome interface accents, 44-point action targets without oversized colored fills. Semantic success/warning/error colors and user-created artwork colors remain intact. No collection-cleaning behavior, import, pairing, library or system operation was added or changed.
+
+Previous approved version: 1.5.0 (8), commit `0fdad94`.
