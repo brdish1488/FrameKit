@@ -273,24 +273,33 @@ final class PasscodeThemeImportTests: XCTestCase {
 // Synthetic images only; no pairing records, artwork or device secrets.
 @MainActor
 final class FrameKitDesignSnapshotTests: XCTestCase {
-    func testAllTabsAndCreatorAtPhoneSize() async throws {
+    func testSingleHomeRoutesAndCreatorAtPhoneSize() async throws {
         let scene = try XCTUnwrap(UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }.first)
         let previous = scene.windows.first(where: \.isKeyWindow)
         let model = AppViewModel()
-        let host = UIHostingController(rootView: ContentView().environmentObject(model))
         let window = UIWindow(windowScene: scene)
         window.frame = CGRect(x: 0, y: 0, width: 393, height: 852)
         window.overrideUserInterfaceStyle = .dark
-        window.rootViewController = host
-        window.makeKeyAndVisible()
         defer { window.isHidden = true; previous?.makeKey() }
 
-        for tab in AppTab.allCases {
-            model.selectedTab = tab
-            try await capture(tab.rawValue, host: host, window: window)
+        let routes: [(String, FrameKitDestination?)] = [
+            ("Home", nil), ("Connection", .connection), ("Themes", .themes),
+            ("Wallpapers", .wallpapers), ("Wallet", .wallet)
+        ]
+        for (name, route) in routes {
+            let host = mount(route, model: model, window: window)
+            try await capture(name, host: host, window: window)
+            XCTAssertTrue(descendants(of: UITabBar.self, in: host.view).isEmpty,
+                          "The home and work screens must not contain a duplicated tab bar")
+            let bars = descendants(of: UINavigationBar.self, in: host.view)
+            XCTAssertEqual(bars.count, 1, "Each route must share one navigation stack")
+            if route != nil {
+                XCTAssertNotNil(bars.first?.backItem, "A work screen must provide native back navigation")
+            }
         }
-        model.selectedTab = .passcodeThemes
+
         model.passcodeMode = .themeCreator
+        var host = mount(.themes, model: model, window: window)
         try await capture("Theme creator", host: host, window: window)
 
         let keys = Dictionary(uniqueKeysWithValues: (0...9).map { digit in
@@ -304,7 +313,23 @@ final class FrameKitDesignSnapshotTests: XCTestCase {
         })
         model.passcodeMode = .applyTheme
         model.loadedTheme = PasscodeThemeInfo(name: "Preview theme", filePath: "", fileCount: 10, keysPreview: keys)
+        host = mount(.themes, model: model, window: window)
         try await capture("Imported theme", host: host, window: window)
+    }
+
+    private func mount(_ route: FrameKitDestination?, model: AppViewModel, window: UIWindow) -> UIViewController {
+        let path: [FrameKitDestination] = route.map { [$0] } ?? []
+        let host = UIHostingController(rootView: ContentView(initialPath: path).environmentObject(model))
+        window.rootViewController = host
+        window.makeKeyAndVisible()
+        return host
+    }
+
+    private func descendants<T: UIView>(of type: T.Type, in view: UIView) -> [T] {
+        var result: [T] = []
+        if let match = view as? T { result.append(match) }
+        for child in view.subviews { result.append(contentsOf: descendants(of: type, in: child)) }
+        return result
     }
 
     private func capture(_ name: String, host: UIViewController, window: UIWindow) async throws {
