@@ -200,3 +200,71 @@ final class CardPhotoCropTests: XCTestCase {
         }
     }
 }
+
+
+// Regression: legacy TelephonyUI-8 archives with deflated PNG entries and spaced filenames.
+// Uses generated coloured squares, not user-provided artwork.
+@MainActor
+final class PasscodeThemeImportTests: XCTestCase {
+    private func fixtureURL() throws -> URL {
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString + ".passthm")
+        let data = try XCTUnwrap(Data(base64Encoded: "UEsDBBQAAAAIAFmAT10AAAAAAgAAAAAAAAAOAAAAVGVsZXBob255VUktOC8DAFBLAwQUAAAACABZgE9d2ju4bmMAAABnAAAAHgAAAFRlbGVwaG9ueVVJLTgvZW4tMC0tLXdoaXRlLnBuZ+sM8HPn5ZLiYmBg4PX0cAkC0nJALMPBBiTLfvCvBFJ6ni6OIRVz3p41ZGRQ4GAwUGGeeSIz+OWDw5tFb6zcpy/2xE1LrPto0sYIHSBVzzbNkckw5sYxFaBOBk9XP5d1TglNAFBLAwQUAAAACABZgE9dd5nxSmMAAABnAAAAHgAAAFRlbGVwaG9ueVVJLTgvZW4tMS0tLXdoaXRlLnBuZ+sM8HPn5ZLiYmBg4PX0cAkC0nJALMPBBiTLfvCvBFJ6ni6OIRVz3p41ZGRQ4GAwUOH1PJEZ/PLB4c2iN1bu0xd74qYl1n00aWOEDpCqZ5v3hsnVW+n/VqBOBk9XP5d1TglNAFBLAwQUAAAACABZgE9dYzy/wGMAAABnAAAAIwAAAFRlbGVwaG9ueVVJLTgvZW4tMi1BIEIgQy0td2hpdGUucG5n6wzwc+flkuJiYGDg9fRwCQLSckAsw8EGJMt+8K8EUnqeLo4hFXPenjVkZFDgYDBQETe3zNWSranYxmR99fvRpjseR5M2RuiIdQOpH+cZlk9niuydeLkMqJPB09XPZZ1TQhMAUEsDBBQAAAAIAFmAT11xZ7mWYwAAAGcAAAAjAAAAVGVsZXBob255VUktOC9lbi0zLUQgRSBGLS13aGl0ZS5wbmfrDPBz5+WS4mJgYOD19HAJAtJyQCzDwQYky37wrwRSep4ujiEVc96eNWRkUOBgMFCRMRfM1ZKtqdjGZB37/WjTHY+jSRsjdMS6gdSP8wwbnJhyVx2PDgXqZPB09XNZ55TQBABQSwMEFAAAAAgAWYBPXYTMbLtjAAAAZwAAACMAAABUZWxlcGhvbnlVSS04L2VuLTQtRyBIIEktLXdoaXRlLnBuZ+sM8HPn5ZLiYmBg4PX0cAkC0nJALMPBBiTLfvCvBFJ6ni6OIRVz3p41ZGRQ4GAwUJHx5EgLfvng8GbRGy936Ys9cdMS6z6atDFCB0jVs+14y9R4+uRGe6BOBk9XP5d1TglNAFBLAwQUAAAACABZgE9dHICf+WMAAABnAAAAIwAAAFRlbGVwaG9ueVVJLTgvZW4tNS1KIEsgTC0td2hpdGUucG5n6wzwc+flkuJiYGDg9fRwCQLSckAsw8EGJMt+8K8EUnqeLo4hFXPenjVkZFDgYDBQkZnZkRz88sHhzaI3Xu7SF3vipiXWfTRpY4QOkKpnOziDaaqVq7w8UCeDp6ufyzqnhCYAUEsDBBQAAAAIAFmAT12wzRbWYwAAAGcAAAAjAAAAVGVsZXBob255VUktOC9lbi02LU0gTiBPLS13aGl0ZS5wbmfrDPBz5+WS4mJgYOD19HAJAtJyQCzDwQYky37wrwRSep4ujiEVc96eNWRkUOBgMFCRecmRGPzyweHNojde7tIXe+KmJdZ9NGljhA6Qqmc75cy08orgjHqgTgZPVz+XdU4JTQBQSwMEFAAAAAgAWYBPXaQ+ou1iAAAAZQAAACUAAABUZWxlcGhvbnlVSS04L2VuLTctUCBRIFIgUy0td2hpdGUucG5n6wzwc+flkuJiYGDg9fRwCQLSckAsw8EGJMt+8K8EUjqeLo4hFXPenjVkZDDgYFiws+DZlpVlHz42MrmkfrX+oB+0MUJHrPtoEpC6J3npHdPeqfYLsoH6GDxd/VzWOSU0AQBQSwMEFAAAAAgAWYBPXQEx7r9jAAAAZwAAACMAAABUZWxlcGhvbnlVSS04L2VuLTgtVCBVIFYtLXdoaXRlLnBuZ+sM8HPn5ZLiYmBg4PX0cAkC0nJALMPBBiTLfvCvBFJ6ni6OIRVz3p41ZGRQ4GAwUJGx5Ey0f/ng8GbRGzuv6os9cdMS6z6atDFCB0jVs92eyXTxZOTZfUCdDJ6ufi7rnBKaAFBLAwQUAAAACABZgE9d3dSA/mMAAABnAAAAJQAAAFRlbGVwaG9ueVVJLTgvZW4tOS1XIFggWSBaLS13aGl0ZS5wbmfrDPBz5+WS4mJgYOD19HAJAtJyQCzDwQYky37wrwRSep4ujiEVc96eNWRkUOBgMFCRsexM1n754PBm0Rs7r+qLPXHTEus+mrQxQgdI1bM9cWF6unl+YjhQJ4Onq5/LOqeEJgBQSwECFAMUAAAACABZgE9dAAAAAAIAAAAAAAAADgAAAAAAAAAAABAA/UEAAAAAVGVsZXBob255VUktOC9QSwECFAMUAAAACABZgE9d2ju4bmMAAABnAAAAHgAAAAAAAAAAAAAAgAEuAAAAVGVsZXBob255VUktOC9lbi0wLS0td2hpdGUucG5nUEsBAhQDFAAAAAgAWYBPXXeZ8UpjAAAAZwAAAB4AAAAAAAAAAAAAAIABzQAAAFRlbGVwaG9ueVVJLTgvZW4tMS0tLXdoaXRlLnBuZ1BLAQIUAxQAAAAIAFmAT11jPL/AYwAAAGcAAAAjAAAAAAAAAAAAAACAAWwBAABUZWxlcGhvbnlVSS04L2VuLTItQSBCIEMtLXdoaXRlLnBuZ1BLAQIUAxQAAAAIAFmAT11xZ7mWYwAAAGcAAAAjAAAAAAAAAAAAAACAARACAABUZWxlcGhvbnlVSS04L2VuLTMtRCBFIEYtLXdoaXRlLnBuZ1BLAQIUAxQAAAAIAFmAT12EzGy7YwAAAGcAAAAjAAAAAAAAAAAAAACAAbQCAABUZWxlcGhvbnlVSS04L2VuLTQtRyBIIEktLXdoaXRlLnBuZ1BLAQIUAxQAAAAIAFmAT10cgJ/5YwAAAGcAAAAjAAAAAAAAAAAAAACAAVgDAABUZWxlcGhvbnlVSS04L2VuLTUtSiBLIEwtLXdoaXRlLnBuZ1BLAQIUAxQAAAAIAFmAT12wzRbWYwAAAGcAAAAjAAAAAAAAAAAAAACAAfwDAABUZWxlcGhvbnlVSS04L2VuLTYtTSBOIE8tLXdoaXRlLnBuZ1BLAQIUAxQAAAAIAFmAT12kPqLtYgAAAGUAAAAlAAAAAAAAAAAAAACAAaAEAABUZWxlcGhvbnlVSS04L2VuLTctUCBRIFIgUy0td2hpdGUucG5nUEsBAhQDFAAAAAgAWYBPXQEx7r9jAAAAZwAAACMAAAAAAAAAAAAAAIABRQUAAFRlbGVwaG9ueVVJLTgvZW4tOC1UIFUgVi0td2hpdGUucG5nUEsBAhQDFAAAAAgAWYBPXd3UgP5jAAAAZwAAACUAAAAAAAAAAAAAAIAB6QUAAFRlbGVwaG9ueVVJLTgvZW4tOS1XIFggWSBaLS13aGl0ZS5wbmdQSwUGAAAAAAsACwBgAwAAjwYAAAAA"))
+        try data.write(to: url)
+        return url
+    }
+
+    func testLegacyDeflatedArchiveDecodesAllTenDigits() throws {
+        let url = try fixtureURL()
+        defer { try? FileManager.default.removeItem(at: url) }
+        let result = try XCTUnwrap(PasscodeThemeReader.inspect(url: url))
+        XCTAssertEqual(Set(result.keys.keys), Set((0...9).map(String.init)))
+        XCTAssertEqual(result.rawData.count, 10)
+        XCTAssertEqual(result.fileCount, 10)
+    }
+
+    func testImportKeepsStableCopyAndPublishesLoadedTheme() async throws {
+        let source = try fixtureURL()
+        defer { try? FileManager.default.removeItem(at: source) }
+        let vm = AppViewModel()
+        vm.importPasscodeSelection([source])
+        let deadline = Date().addingTimeInterval(20)
+        while vm.isImportingTheme && Date() < deadline {
+            try await Task.sleep(nanoseconds: 50_000_000)
+        }
+        XCTAssertFalse(vm.isImportingTheme, "Import stalled: " + vm.themeImportStatus)
+        XCTAssertNil(vm.themeImportError)
+        let theme = try XCTUnwrap(vm.loadedTheme, vm.themeImportError ?? vm.themeImportStatus)
+        XCTAssertEqual(theme.keysPreview.count, 10)
+        XCTAssertNotEqual(theme.filePath, source.path)
+        try FileManager.default.removeItem(at: source)
+        XCTAssertTrue(FileManager.default.fileExists(atPath: theme.filePath))
+        XCTAssertEqual(vm.passcodeMode, .applyTheme)
+        vm.clearLoadedTheme()
+        XCTAssertFalse(FileManager.default.fileExists(atPath: theme.filePath))
+    }
+
+    func testEmptyOrMultipleSelectionsGiveVisibleErrors() {
+        let vm = AppViewModel()
+        vm.importPasscodeSelection([])
+        XCTAssertNotNil(vm.themeImportError)
+        let url = URL(fileURLWithPath: "/tmp/test.passthm")
+        vm.importPasscodeSelection([url, url])
+        XCTAssertNotNil(vm.themeImportError)
+        XCTAssertFalse(vm.isImportingTheme)
+    }
+
+    func testDamagedArchiveReportsFailure() async throws {
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString + ".passthm")
+        try Data("not a zip".utf8).write(to: url)
+        defer { try? FileManager.default.removeItem(at: url) }
+        let vm = AppViewModel()
+        vm.loadPassthm(url: url)
+        let deadline = Date().addingTimeInterval(20)
+        while vm.isImportingTheme && Date() < deadline {
+            try await Task.sleep(nanoseconds: 50_000_000)
+        }
+        XCTAssertFalse(vm.isImportingTheme)
+        XCTAssertNotNil(vm.themeImportError)
+        XCTAssertNil(vm.loadedTheme)
+    }
+}
