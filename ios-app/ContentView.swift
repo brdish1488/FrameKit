@@ -572,15 +572,13 @@ struct FrameKitHomeView: View {
 
                 VStack(spacing: 16) {
                     NavigationLink(value: FrameKitDestination.themes) {
-                        FrameKitFeatureCard(title: "Темы пароля", subtitle: "Свой стиль кнопок
-экрана блокировки", format: ".passthm", symbol: "circle.grid.3x3.fill", accent: FrameKitStyle.blue)
+                        FrameKitFeatureCard(title: "Темы пароля", subtitle: "Свой стиль кнопок экрана блокировки", format: ".passthm", symbol: "circle.grid.3x3.fill", accent: FrameKitStyle.blue)
                     }
                     .buttonStyle(.plain)
                     .accessibilityIdentifier("home.themes")
 
                     NavigationLink(value: FrameKitDestination.wallpapers) {
-                        FrameKitFeatureCard(title: "Обои", subtitle: "Добавь движение
-экрану блокировки", format: ".tendies", symbol: "photo.stack", accent: FrameKitStyle.purple)
+                        FrameKitFeatureCard(title: "Обои", subtitle: "Добавь движение экрану блокировки", format: ".tendies", symbol: "photo.stack", accent: FrameKitStyle.purple)
                     }
                     .buttonStyle(.plain)
                     .accessibilityIdentifier("home.wallpapers")
