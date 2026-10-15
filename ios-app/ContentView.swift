@@ -30,7 +30,7 @@ struct CreditsSheet: View {
     @Environment(\.dismiss) private var dismiss
 
     private var version: String {
-        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.3.4"
+        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.3.5"
     }
 
     var body: some View {
@@ -386,46 +386,6 @@ struct DocumentPickerView: UIViewControllerRepresentable {
         func documentPickerWasCancelled(_ controller: UIDocumentPickerViewController) {
             parent.dismiss()
         }
-    }
-}
-
-// MARK: - Passcode Archive Picker
-
-struct PassthmDocumentPickerView: UIViewControllerRepresentable {
-    let onPick: (URL) -> Void
-    let onFailure: (String) -> Void
-    @Environment(\.dismiss) private var dismiss
-
-    func makeUIViewController(context: Context) -> UIDocumentPickerViewController {
-        var types: [UTType] = [.item, .data, .archive, .zip]
-        if let type = UTType("com.aircard.passthm") { types.append(type) }
-        if let type = UTType(filenameExtension: "passthm") { types.append(type) }
-        let picker = UIDocumentPickerViewController(forOpeningContentTypes: types, asCopy: true)
-        picker.delegate = context.coordinator
-        // Explicit confirmation, matching the wallpaper picker. Import one theme per operation.
-        picker.allowsMultipleSelection = true
-        return picker
-    }
-
-    func updateUIViewController(_ controller: UIDocumentPickerViewController, context: Context) {}
-    func makeCoordinator() -> Coordinator { Coordinator(self) }
-
-    final class Coordinator: NSObject, UIDocumentPickerDelegate {
-        let parent: PassthmDocumentPickerView
-        init(_ parent: PassthmDocumentPickerView) { self.parent = parent }
-        func documentPicker(_ controller: UIDocumentPickerViewController, didPickDocumentsAt urls: [URL]) {
-            defer { parent.dismiss() }
-            guard urls.count == 1, let url = urls.first else {
-                parent.onFailure("Choose exactly one .passthm theme, then tap Open.")
-                return
-            }
-            guard ["passthm", "zip"].contains(url.pathExtension.lowercased()) else {
-                parent.onFailure("This is not a .passthm theme. Select the original .passthm archive (or its ZIP archive), not an image or a wallpaper.")
-                return
-            }
-            parent.onPick(url)
-        }
-        func documentPickerWasCancelled(_ controller: UIDocumentPickerViewController) { parent.dismiss() }
     }
 }
 
@@ -1581,6 +1541,7 @@ struct AddCardSheet: View {
 struct PasscodeThemeTab: View {
     @EnvironmentObject var vm: AppViewModel
     @State private var showCredits = false
+    @State private var showThemeFileImporter = false
 
     var body: some View {
         NavigationStack {
@@ -1596,9 +1557,36 @@ struct PasscodeThemeTab: View {
                 }
 
                 if vm.passcodeMode == .applyTheme {
-                    ApplyThemeSection()
+                    ApplyThemeSection(onImport: {
+                        vm.themeImportError = nil
+                        vm.themeImportStatus = "File picker opened. Select one .passthm and tap Open."
+                        showThemeFileImporter = true
+                    })
                 } else {
                     ThemeCreatorSection()
+                }
+
+                Section("Theme import • FrameKit 1.3.5 (4)") {
+                    if vm.isImportingTheme {
+                        ProgressView("Reading theme…")
+                    }
+                    if !vm.themeImportStatus.isEmpty {
+                        Text(vm.themeImportStatus)
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                            .textSelection(.enabled)
+                    }
+                    if let message = vm.themeImportError {
+                        Label(message, systemImage: "exclamationmark.triangle")
+                            .font(.footnote)
+                            .foregroundStyle(.red)
+                            .textSelection(.enabled)
+                    }
+                    if let theme = vm.loadedTheme {
+                        Text("Loaded: \(theme.name) • \(theme.keysPreview.count) keys")
+                            .font(.footnote.bold())
+                            .foregroundStyle(.green)
+                    }
                 }
 
                 // Flash log
@@ -1629,6 +1617,21 @@ struct PasscodeThemeTab: View {
             .sheet(isPresented: $showCredits) {
                 CreditsSheet()
             }
+            .fileImporter(isPresented: $showThemeFileImporter,
+                          allowedContentTypes: [.item], allowsMultipleSelection: true) { result in
+                switch result {
+                case .success(let urls):
+                    vm.importPasscodeSelection(urls)
+                case .failure(let error):
+                    let cocoa = error as NSError
+                    if cocoa.domain == NSCocoaErrorDomain && cocoa.code == NSUserCancelledError {
+                        vm.themeImportStatus = "Import cancelled."
+                    } else {
+                        vm.themeImportStatus = "The file picker reported an error."
+                        vm.themeImportError = error.localizedDescription
+                    }
+                }
+            }
             .onAppear { vm.scanDocumentsDirectory() }
         }
     }
@@ -1638,7 +1641,7 @@ struct PasscodeThemeTab: View {
 
 struct ApplyThemeSection: View {
     @EnvironmentObject var vm: AppViewModel
-    @State private var showDocumentPicker = false
+    let onImport: () -> Void
 
     var body: some View {
         // Themes dropped directly into Documents folder
@@ -1665,7 +1668,7 @@ struct ApplyThemeSection: View {
         Section("Browse Files") {
             HStack {
                 Button {
-                    showDocumentPicker = true
+                    onImport()
                 } label: {
                     Label(vm.loadedTheme == nil ? "Choose .passthm from Files…" : "Change .passthm…",
                           systemImage: "doc.badge.plus")
@@ -1684,31 +1687,12 @@ struct ApplyThemeSection: View {
                 }
             }
             .disabled(vm.isImportingTheme)
-            .sheet(isPresented: $showDocumentPicker) {
-                PassthmDocumentPickerView(onPick: { url in
-                    vm.loadPassthm(url: url)
-                }, onFailure: { message in
-                    vm.themeImportError = message
-                    vm.themeImportStatus = ""
-                })
-            }
+
 
             Text("Select one .passthm file and tap Open. No pairing is required just to import a theme.")
                 .font(.footnote)
                 .foregroundStyle(.secondary)
-            if vm.isImportingTheme {
-                ProgressView("Reading theme…")
-            } else if !vm.themeImportStatus.isEmpty {
-                Label(vm.themeImportStatus, systemImage: "checkmark.circle")
-                    .font(.footnote)
-                    .foregroundStyle(.green)
-            }
-            if let message = vm.themeImportError {
-                Label(message, systemImage: "exclamationmark.triangle")
-                    .font(.footnote)
-                    .foregroundStyle(.red)
-                    .textSelection(.enabled)
-            }
+
         }
 
         if let theme = vm.loadedTheme {

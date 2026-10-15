@@ -951,12 +951,25 @@ final class AppViewModel: ObservableObject {
 
     // MARK: - Passthm Load
 
+    func importPasscodeSelection(_ urls: [URL]) {
+        themeImportStatus = "File picker returned \(urls.count) file(s)."
+        guard urls.count == 1, let url = urls.first else {
+            themeImportError = "Choose exactly one .passthm archive and tap Open."
+            return
+        }
+        loadPassthm(url: url)
+    }
+
     func loadPassthm(url: URL) {
-        guard !isImportingTheme else { return }
+        guard !isImportingTheme else {
+            themeImportStatus = "Another theme is still being read. Please wait."
+            return
+        }
+        passcodeMode = .applyTheme
         themeImportError = nil
-        themeImportStatus = ""
+        themeImportStatus = "Selected: \(url.lastPathComponent). Preparing local copy…"
         guard ["passthm", "zip"].contains(url.pathExtension.lowercased()) else {
-            themeImportError = "Select a .passthm theme or a ZIP theme archive."
+            themeImportError = "Select a .passthm theme or ZIP archive, not an image or wallpaper."
             return
         }
         let generation = UUID()
@@ -965,55 +978,56 @@ final class AppViewModel: ObservableObject {
         let directory = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0]
             .appendingPathComponent("framekit_theme_\(UUID().uuidString)", isDirectory: true)
         let localURL = directory.appendingPathComponent(url.lastPathComponent)
+        // Retain the grant until background copy AND archive reading finish.
         let scope = url.startAccessingSecurityScopedResource()
-        defer { if scope { url.stopAccessingSecurityScopedResource() } }
-        do {
-            try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-            var coordinationError: NSError?
-            var copyError: Error?
-            NSFileCoordinator().coordinate(readingItemAt: url, options: [], error: &coordinationError) { readableURL in
-                do { try FileManager.default.copyItem(at: readableURL, to: localURL) }
-                catch { copyError = error }
-            }
-            if let error = coordinationError { throw error }
-            if let error = copyError { throw error }
-            let attributes = try FileManager.default.attributesOfItem(atPath: localURL.path)
-            guard let size = attributes[.size] as? NSNumber, size.int64Value > 0 else {
-                throw NSError(domain: "FrameKit.ThemeImport", code: 1,
-                              userInfo: [NSLocalizedDescriptionKey: "The selected theme file is empty."])
-            }
-        } catch {
-            try? FileManager.default.removeItem(at: directory)
-            isImportingTheme = false
-            themeImportError = "Could not copy \(url.lastPathComponent): \(error.localizedDescription). Download the file in Files first, then try again."
-            return
-        }
-
-        // Work only with our own stable copy, never a picker/provider URL after dismissal.
         Task.detached { [weak self] in
-            let result = PasscodeThemeReader.inspect(url: localURL)
-            await MainActor.run {
-                guard let self = self, self.themeImportGeneration == generation else {
-                    try? FileManager.default.removeItem(at: directory)
-                    return
+            defer { if scope { url.stopAccessingSecurityScopedResource() } }
+            do {
+                try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+                var coordinationError: NSError?
+                var copyError: Error?
+                NSFileCoordinator().coordinate(readingItemAt: url, options: [], error: &coordinationError) { readableURL in
+                    do { try FileManager.default.copyItem(at: readableURL, to: localURL) }
+                    catch { copyError = error }
                 }
-                self.isImportingTheme = false
-                if let (keys, rawData, count) = result {
+                if let error = coordinationError { throw error }
+                if let error = copyError { throw error }
+                let attrs = try FileManager.default.attributesOfItem(atPath: localURL.path)
+                guard let size = attrs[.size] as? NSNumber, size.int64Value > 0 else {
+                    throw NSError(domain: "FrameKit.ThemeImport", code: 1,
+                                  userInfo: [NSLocalizedDescriptionKey: "The selected archive is empty."])
+                }
+                await MainActor.run {
+                    guard let self = self, self.themeImportGeneration == generation else { return }
+                    self.themeImportStatus = "Copied \(size.int64Value) bytes. Decoding button images…"
+                }
+                guard let (keys, rawData, count) = PasscodeThemeReader.inspect(url: localURL) else {
+                    throw NSError(domain: "FrameKit.ThemeImport", code: 2,
+                                  userInfo: [NSLocalizedDescriptionKey: "The archive could not be decoded or contains no readable digit-button images."])
+                }
+                await MainActor.run {
+                    guard let self = self, self.themeImportGeneration == generation else {
+                        try? FileManager.default.removeItem(at: directory)
+                        return
+                    }
                     if let previous = self.importedThemeDirectory {
                         try? FileManager.default.removeItem(at: previous)
                     }
                     self.importedThemeDirectory = directory
                     self.loadedTheme = PasscodeThemeInfo(
                         name: localURL.deletingPathExtension().lastPathComponent,
-                        filePath: localURL.path,
-                        fileCount: count,
-                        keysPreview: keys,
-                        rawKeyData: rawData
-                    )
-                    self.themeImportStatus = "Imported \(localURL.lastPathComponent) — \(keys.count) keys."
-                } else {
-                    try? FileManager.default.removeItem(at: directory)
-                    self.themeImportError = "Could not read \(localURL.lastPathComponent). The archive may be damaged or use an unsupported layout: a theme must contain readable digit-button images."
+                        filePath: localURL.path, fileCount: count,
+                        keysPreview: keys, rawKeyData: rawData)
+                    self.isImportingTheme = false
+                    self.themeImportStatus = "Imported \(localURL.lastPathComponent): \(keys.count) keys, \(count) image files."
+                }
+            } catch {
+                try? FileManager.default.removeItem(at: directory)
+                await MainActor.run {
+                    guard let self = self, self.themeImportGeneration == generation else { return }
+                    self.isImportingTheme = false
+                    self.themeImportStatus = "Import stopped for \(url.lastPathComponent)."
+                    self.themeImportError = error.localizedDescription
                 }
             }
         }
