@@ -56,11 +56,11 @@ struct TendiesView: View {
                             Text(vm.tendieItems.isEmpty ? "Импорт .tendies" : "Добавить обои")
                             Spacer()
                         }
-                        .font(.headline)
+                        .font(.subheadline.weight(.medium))
                         .frame(maxWidth: .infinity)
-                        .frame(height: 48)
+                        .frame(height: 44)
                     }
-                    .buttonStyle(.borderedProminent)
+                    .buttonStyle(FrameKitActionStyle(emphasized: true))
                     .tint(FrameKitStyle.purpleFill)
                     .disabled(vm.isImportingWallpapers || vm.tendiesFlashPhase == .running)
                 } footer: {
@@ -137,7 +137,7 @@ struct TendiesView: View {
 
                 // Section 4: Flash Action & Respring
                 Section {
-                    VStack(spacing: 12) {
+                    VStack(spacing: 8) {
                         if case .running = vm.tendiesFlashPhase {
                             HStack(spacing: 10) {
                                 ProgressView()
@@ -157,11 +157,11 @@ struct TendiesView: View {
                                     Text("Применить обои: \(selectedCount)")
                                     Spacer()
                                 }
-                                .font(.headline)
+                                .font(.subheadline.weight(.medium))
                                 .frame(maxWidth: .infinity)
-                                .frame(height: 48)
+                                .frame(height: 44)
                             }
-                            .buttonStyle(.borderedProminent)
+                            .buttonStyle(FrameKitActionStyle(emphasized: true))
                             .tint(FrameKitStyle.purpleFill)
                             .disabled(selectedCount == 0)
                         }
@@ -177,12 +177,11 @@ struct TendiesView: View {
                                 Text("Перезапустить интерфейс")
                                 Spacer()
                             }
-                            .font(.headline)
+                            .font(.subheadline.weight(.medium))
                             .frame(maxWidth: .infinity)
-                            .frame(height: 48)
+                            .frame(height: 44)
                         }
-                        .buttonStyle(.borderedProminent)
-                        .tint(FrameKitStyle.redFill)
+                        .buttonStyle(FrameKitActionStyle())
                     }
                     .listRowInsets(EdgeInsets(top: 12, leading: 14, bottom: 12, trailing: 14))
                 } footer: {
@@ -294,7 +293,7 @@ struct TendieRowView: View {
                 onInspect()
             } label: {
                 Image(systemName: "info.circle")
-                    .foregroundColor(.blue)
+                    .foregroundColor(FrameKitStyle.blue)
                     .frame(width: 44, height: 44)
                     .contentShape(Rectangle())
             }
