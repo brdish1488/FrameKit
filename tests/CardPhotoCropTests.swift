@@ -323,5 +323,30 @@ final class FrameKitDesignSnapshotTests: XCTestCase {
         attachment.name = "FrameKit UI - \(name)"
         attachment.lifetime = .keepAlways
         add(attachment)
+
+        if let scroll = verticalScroll(in: host.view) {
+            let originalOffset = scroll.contentOffset
+            let bottom = max(-scroll.adjustedContentInset.top,
+                             scroll.contentSize.height - scroll.bounds.height + scroll.adjustedContentInset.bottom)
+            scroll.setContentOffset(CGPoint(x: 0, y: bottom), animated: false)
+            try await Task.sleep(nanoseconds: 400_000_000)
+            let lower = UIGraphicsImageRenderer(size: window.bounds.size, format: format).image { _ in
+                window.drawHierarchy(in: window.bounds, afterScreenUpdates: true)
+            }
+            let lowerAttachment = XCTAttachment(image: lower)
+            lowerAttachment.name = "FrameKit UI - \(name) - bottom"
+            lowerAttachment.lifetime = .keepAlways
+            add(lowerAttachment)
+            scroll.setContentOffset(originalOffset, animated: false)
+            try await Task.sleep(nanoseconds: 100_000_000)
+        }
+    }
+
+    private func verticalScroll(in view: UIView) -> UIScrollView? {
+        guard !view.isHidden, view.alpha > 0.01 else { return nil }
+        if let scroll = view as? UIScrollView,
+           scroll.bounds.height > 150,
+           scroll.contentSize.height > scroll.bounds.height + 100 { return scroll }
+        return view.subviews.lazy.compactMap { self.verticalScroll(in: $0) }.first
     }
 }
