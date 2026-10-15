@@ -1406,7 +1406,7 @@ struct WalletCardsTab: View {
                     HStack(spacing: 6) {
                         Spacer()
                         Image(systemName: vm.isScanningCards ? "stop.circle.fill" : "wave.3.left.circle")
-                        Text(vm.isScanningCards ? "Стоп" : "Найти карты")
+                        Text(vm.isScanningCards ? "Стоп" : "Поиск")
                             .lineLimit(1).minimumScaleFactor(0.9)
                         Spacer()
                     }
@@ -1658,7 +1658,7 @@ struct ApplyThemeSection: View {
 
             Section("О теме") {
                 LabeledContent("Файлов в теме", value: "\(theme.fileCount)")
-                LabeledContent("Кнопок", value: "\(theme.keysPreview.count) keys")
+                LabeledContent("Кнопок", value: "\(theme.keysPreview.count)")
 
                 Button {
                     vm.adoptThemeIntoCreator()
