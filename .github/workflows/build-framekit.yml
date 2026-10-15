@@ -1,0 +1,87 @@
+name: Build FrameKit IPA
+'on':
+  push:
+    branches:
+    - main
+    paths:
+    - ios-app/**
+    - AirliftFFI.xcframework/**
+    - AirCard-iOS.xcodeproj/**
+    - .github/workflows/build-framekit.yml
+  workflow_dispatch: {}
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: macos-15
+    timeout-minutes: 25
+    steps:
+    - uses: actions/checkout@v4
+    - name: Validate FrameKit branding and upstream attribution
+      run: 'python3 - <<''PYCODE''
+
+        import plistlib
+
+        from pathlib import Path
+
+        p=plistlib.loads(Path(''ios-app/Info.plist'').read_bytes())
+
+        assert p[''CFBundleDisplayName'']==''FrameKit''
+
+        assert ''FrameKit is a renamed build of AirCard-iOS'' in Path(''ios-app/ContentView.swift'').read_text()
+
+        assert Path(''LICENSE'').is_file()
+
+        print(''FrameKit branding and upstream license verified.'')
+
+        PYCODE
+
+        '
+    - name: Compile FrameKit for iPhone (no Apple account required)
+      run: "set -euo pipefail\nmkdir -p build\nxcodebuild -version\nxcodebuild -project AirCard-iOS.xcodeproj -scheme AirCard-iOS\
+        \ \\\n  -configuration Release -derivedDataPath build/DerivedData \\\n  -destination 'generic/platform=iOS' clean\
+        \ build \\\n  PRODUCT_NAME=FrameKit PRODUCT_MODULE_NAME=AirCard_iOS \\\n  PRODUCT_BUNDLE_IDENTIFIER=com.brdish.framekit\
+        \ \\\n  CODE_SIGN_IDENTITY=\"\" CODE_SIGNING_REQUIRED=NO \\\n  CODE_SIGN_ENTITLEMENTS=\"\" CODE_SIGNING_ALLOWED=NO\
+        \ \\\n  > build/xcodebuild.log 2>&1 || { tail -n 180 build/xcodebuild.log; exit 1; }\ntail -n 12 build/xcodebuild.log\n"
+    - name: Package and verify IPA
+      run: 'set -euo pipefail
+
+        APP="$(find build/DerivedData/Build/Products -name FrameKit.app -type d | head -1)"
+
+        test -n "$APP"
+
+        mkdir -p build/Payload
+
+        cp -R "$APP" build/Payload/FrameKit.app
+
+        rm -rf build/Payload/FrameKit.app/_CodeSignature
+
+        rm -f build/Payload/FrameKit.app/embedded.mobileprovision
+
+        cp LICENSE build/Payload/FrameKit.app/UPSTREAM-LICENSE.txt
+
+        plutil -lint build/Payload/FrameKit.app/Info.plist
+
+        /usr/libexec/PlistBuddy -c ''Print :CFBundleDisplayName'' build/Payload/FrameKit.app/Info.plist | grep -x FrameKit
+
+        codesign --force --sign - build/Payload/FrameKit.app
+
+        codesign --verify --deep --verbose build/Payload/FrameKit.app
+
+        (cd build && zip -qr FrameKit.ipa Payload)
+
+        unzip -t build/FrameKit.ipa
+
+        '
+    - uses: actions/upload-artifact@v4
+      with:
+        name: FrameKit-IPA
+        path: build/FrameKit.ipa
+        if-no-files-found: error
+        retention-days: 3
+    - uses: actions/upload-artifact@v4
+      if: failure()
+      with:
+        name: FrameKit-build-log
+        path: build/xcodebuild.log
+        retention-days: 3
