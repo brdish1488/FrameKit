@@ -81,9 +81,10 @@ jobs:
         \ -scheme AirCard-iOS \\\n  -configuration Debug -derivedDataPath build/TestDerivedData \\\n  -destination \"platform=iOS\
         \ Simulator,id=$DEVICE\" \\\n  -only-testing:AirCard-iOSTests/PasscodeThemeImportTests \\\n  -only-testing:AirCard-iOSTests/FrameKitDesignSnapshotTests\
         \ \\\n  -resultBundlePath build/ThemeImportTests.xcresult \\\n  CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO \\\
-        \n  > build/import-tests.log 2>&1 || { tail -n 180 build/import-tests.log; exit 1; }\ntail -n 35 build/import-tests.log\n\
-        mkdir -p build/ui-review\nxcrun xcresulttool export attachments --path build/ThemeImportTests.xcresult --output-path\
-        \ build/ui-review\n"
+        \n  > build/import-tests.log 2>&1 || { tail -n 180 build/import-tests.log; if [ -d build/ThemeImportTests.xcresult\
+        \ ]; then mkdir -p build/ui-review; xcrun xcresulttool export attachments --path build/ThemeImportTests.xcresult --output-path\
+        \ build/ui-review || true; fi; exit 1; }\ntail -n 35 build/import-tests.log\nmkdir -p build/ui-review\nxcrun xcresulttool\
+        \ export attachments --path build/ThemeImportTests.xcresult --output-path build/ui-review\n"
       if: runner.arch == 'ARM64'
     - name: Package and verify IPA
       run: 'set -euo pipefail
