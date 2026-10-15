@@ -468,6 +468,38 @@ final class FrameKitFeatureTests: XCTestCase {
         let decoded = try JSONDecoder().decode(TendieItem.self, from: JSONSerialization.data(withJSONObject: json))
         XCTAssertNil(decoded.previewVideoFileName); XCTAssertNil(decoded.previewVideoURL)
     }
+    func testEmbeddedPlayableVideoProducesOwnedPreview() async throws {
+        let dir = directory(); try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: dir) }
+        // Synthetic solid-blue video generated for the test; contains no user media.
+        let data = try XCTUnwrap(Data(base64Encoded: "AAAAIGZ0eXBpc29tAAACAGlzb21pc28yYXZjMW1wNDEAAANdbW9vdgAAAGxtdmhkAAAAAAAAAAAAAAAAAAAD6AAAAlgAAQAAAQAAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgAAAoh0cmFrAAAAXHRraGQAAAADAAAAAAAAAAAAAAABAAAAAAAAAlgAAAAAAAAAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAABAAAAAAEAAAABAAAAAAAAkZWR0cwAAABxlbHN0AAAAAAAAAAEAAAJYAAAQAAABAAAAAAIAbWRpYQAAACBtZGhkAAAAAAAAAAAAAAAAAAAoAAAAGABVxAAAAAAALWhkbHIAAAAAAAAAAHZpZGUAAAAAAAAAAAAAAABWaWRlb0hhbmRsZXIAAAABq21pbmYAAAAUdm1oZAAAAAEAAAAAAAAAAAAAACRkaW5mAAAAHGRyZWYAAAAAAAAAAQAAAAx1cmwgAAAAAQAAAWtzdGJsAAAAv3N0c2QAAAAAAAAAAQAAAK9hdmMxAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAAAAEAAQABIAAAASAAAAAAAAAABFExhdmM2MS4zLjEwMCBsaWJ4MjY0AAAAAAAAAAAAAAAAGP//AAAANWF2Y0MBZAAK/+EAGGdkAAqs2UQmwEQAAAMABAAAAwAoPEiWWAEABmjr48siwP34+AAAAAAQcGFzcAAAAAEAAAABAAAAFGJ0cnQAAAAAAAAnegAAJ3oAAAAYc3R0cwAAAAAAAAABAAAAAwAACAAAAAAUc3RzcwAAAAAAAAABAAAAAQAAAChjdHRzAAAAAAAAAAMAAAABAAAQAAAAAAEAABgAAAAAAQAACAAAAAAcc3RzYwAAAAAAAAABAAAAAQAAAAMAAAABAAAAIHN0c3oAAAAAAAAAAAAAAAMAAALcAAAADgAAAAwAAAAUc3RjbwAAAAAAAAABAAADjQAAAGF1ZHRhAAAAWW1ldGEAAAAAAAAAIWhkbHIAAAAAAAAAAG1kaXJhcHBsAAAAAAAAAAAAAAAALGlsc3QAAAAkqXRvbwAAABxkYXRhAAAAAQAAAABMYXZmNjEuMS4xMDAAAAAIZnJlZQAAAv5tZGF0AAACrQYF//+p3EXpvebZSLeWLNgg2SPu73gyNjQgLSBjb3JlIDE2NCByMzE5MSA0NjEzYWMzIC0gSC4yNjQvTVBFRy00IEFWQyBjb2RlYyAtIENvcHlsZWZ0IDIwMDMtMjAyNCAtIGh0dHA6Ly93d3cudmlkZW9sYW4ub3JnL3gyNjQuaHRtbCAtIG9wdGlvbnM6IGNhYmFjPTEgcmVmPTMgZGVibG9jaz0xOjA6MCBhbmFseXNlPTB4MzoweDExMyBtZT1oZXggc3VibWU9NyBwc3k9MSBwc3lfcmQ9MS4wMDowLjAwIG1peGVkX3JlZj0xIG1lX3JhbmdlPTE2IGNocm9tYV9tZT0xIHRyZWxsaXM9MSA4eDhkY3Q9MSBjcW09MCBkZWFkem9uZT0yMSwxMSBmYXN0X3Bza2lwPTEgY2hyb21hX3FwX29mZnNldD0tMiB0aHJlYWRzPTIgbG9va2FoZWFkX3RocmVhZHM9MSBzbGljZWRfdGhyZWFkcz0wIG5yPTAgZGVjaW1hdGU9MSBpbnRlcmxhY2VkPTAgYmx1cmF5X2NvbXBhdD0wIGNvbnN0cmFpbmVkX2ludHJhPTAgYmZyYW1lcz0zIGJfcHlyYW1pZD0yIGJfYWRhcHQ9MSBiX2JpYXM9MCBkaXJlY3Q9MSB3ZWlnaHRiPTEgb3Blbl9nb3A9MCB3ZWlnaHRwPTIga2V5aW50PTI1MCBrZXlpbnRfbWluPTUgc2NlbmVjdXQ9NDAgaW50cmFfcmVmcmVzaD0wIHJjX2xvb2thaGVhZD00MCByYz1jcmYgbWJ0cmVlPTEgY3JmPTIzLjAgcWNvbXA9MC42MCBxcG1pbj0wIHFwbWF4PTY5IHFwc3RlcD00IGlwX3JhdGlvPTEuNDAgYXE9MToxLjAwAIAAAAAnZYiEABH//ufj/AptfMRxOnYY+vfW13Ki6Nce2KM2pLx924Q9sRn9AAAACkGaImxD//6pnTQAAAAIAZ5BeQ//BMU="))
+        try data.write(to: dir.appendingPathComponent("sample.mp4"))
+        let preview = await WallpaperMoviePreview.extract(from: dir)
+        let name = try XCTUnwrap(preview.0)
+        let owned = WallpaperMoviePreview.directory.appendingPathComponent(name)
+        defer { try? FileManager.default.removeItem(at: owned) }
+        XCTAssertTrue(FileManager.default.fileExists(atPath: owned.path))
+        XCTAssertNotNil(preview.1)
+        let item = TendieItem(name: "Video", fileName: "video.tendies", relativePath: "video.tendies", previewVideoFileName: name)
+        XCTAssertEqual(item.previewVideoURL, owned)
+        var traversal = item; traversal.previewVideoFileName = "../sample.mp4"
+        XCTAssertNil(traversal.previewVideoURL)
+    }
+    func testSavedCreatorArchiveOpensAfterOriginalCacheIsRemoved() async throws {
+        let dir = directory(); defer { try? FileManager.default.removeItem(at: dir) }
+        let model = AppViewModel(libraryDirectory: dir)
+        model.passcodeMode = .themeCreator; model.sliceMode = .individualKeys; model.customKeys = keys()
+        model.saveCreatorToLibrary(name: "Моя новая тема")
+        for _ in 0..<200 where model.isSavingTheme { try await Task.sleep(nanoseconds: 50_000_000) }
+        XCTAssertFalse(model.isSavingTheme)
+        let entry = try XCTUnwrap(model.themeLibrary.first)
+        model.clearAllCreator(); model.openSavedTheme(entry)
+        for _ in 0..<200 where model.isImportingTheme { try await Task.sleep(nanoseconds: 50_000_000) }
+        XCTAssertNil(model.themeImportError); XCTAssertEqual(model.loadedTheme?.name, "Моя новая тема")
+        XCTAssertEqual(model.loadedTheme?.keysPreview.count, 10)
+        model.clearLoadedTheme()
+        XCTAssertTrue(FileManager.default.fileExists(atPath: model.themeLibraryStorage.archive(entry.id).path))
+    }
     func testEmptyWallpaperFolderDoesNotInventAnimation() async throws {
         let dir = directory(); try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: dir) }
