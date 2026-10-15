@@ -30,7 +30,7 @@ struct CreditsSheet: View {
     @Environment(\.dismiss) private var dismiss
 
     private var version: String {
-        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.3.6"
+        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.4.0"
     }
 
     var body: some View {
@@ -46,10 +46,10 @@ struct CreditsSheet: View {
                             .foregroundStyle(.blue)
                         Text("FrameKit")
                             .font(.largeTitle.bold())
-                        Text("Version \(version)")
+                        Text("Версия \(version)")
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
-                        Text("Wallpaper, passcode themes and personal touches for your iPhone.")
+                        Text("Темы, обои и оформление твоего iPhone.")
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
                             .multilineTextAlignment(.center)
@@ -57,17 +57,17 @@ struct CreditsSheet: View {
                     .frame(maxWidth: .infinity)
 
                     VStack(alignment: .leading, spacing: 12) {
-                        Text("Open-source foundation")
+                        Text("Открытый исходный код")
                             .font(.headline)
                         Text("FrameKit is a fork of AirCard-iOS. This build adds independent branding and removes donation prompts; the underlying system logic is retained from the original project.")
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
-                        Link("FrameKit source code", destination: URL(string: "https://github.com/brdish1488/FrameKit")!)
+                        Link("Исходный код FrameKit", destination: URL(string: "https://github.com/brdish1488/FrameKit")!)
                         Link("Original project: AirCard-iOS", destination: URL(string: "https://github.com/Mak5er/AirCard-iOS")!)
                     }
 
                     VStack(alignment: .leading, spacing: 10) {
-                        Text("Acknowledgements")
+                        Text("Благодарности")
                             .font(.headline)
                         Text("AirCard-iOS: @mak5er, @merybist and upstream contributors. AirLift: @0xjohnnydev. NeoSpring / PosterBoard: @rooootdev, @skadz108 and @neonmodder123.")
                             .font(.footnote)
@@ -83,11 +83,11 @@ struct CreditsSheet: View {
                 }
                 .padding(24)
             }
-            .navigationTitle("About FrameKit")
+            .navigationTitle("О FrameKit")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Done") { dismiss() }
+                    Button("Готово") { dismiss() }
                 }
             }
         }
@@ -251,7 +251,7 @@ struct PairingGuideSheet: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Done") { dismiss() }.bold()
+                    Button("Готово") { dismiss() }.bold()
                 }
             }
         }
@@ -389,6 +389,100 @@ struct DocumentPickerView: UIViewControllerRepresentable {
     }
 }
 
+// MARK: - FrameKit visual language
+
+// Shared native styling only. Import, pairing and apply engines stay unchanged.
+enum FrameKitStyle {
+    static let blue = Color(red: 0.23, green: 0.69, blue: 1.0)
+    static let purple = Color(red: 0.82, green: 0.32, blue: 0.98)
+    static let surface = Color(red: 0.11, green: 0.11, blue: 0.12)
+}
+
+struct FrameKitFormStyle: ViewModifier {
+    func body(content: Content) -> some View {
+        content
+            .scrollContentBackground(.hidden)
+            .background(Color.black)
+            .listSectionSpacing(24)
+            .environment(\.defaultMinListRowHeight, 54)
+            .navigationBarTitleDisplayMode(.large)
+            .toolbarBackground(Color.black, for: .navigationBar)
+    }
+}
+
+struct FrameKitHero: View {
+    let title: String
+    let subtitle: String
+    let symbol: String
+    var accent: Color = FrameKitStyle.blue
+
+    var body: some View {
+        HStack(alignment: .center, spacing: 16) {
+            Image(systemName: symbol)
+                .font(.system(size: 25, weight: .semibold))
+                .foregroundStyle(accent)
+                .frame(width: 56, height: 56)
+                .background(accent.opacity(0.13), in: RoundedRectangle(cornerRadius: 17))
+            VStack(alignment: .leading, spacing: 5) {
+                Text(title).font(.headline).foregroundStyle(.white)
+                Text(subtitle).font(.subheadline).foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(.vertical, 8)
+    }
+}
+
+struct FrameKitStatusRow: View {
+    let title: String
+    let subtitle: String
+    let symbol: String
+    let active: Bool
+
+    var body: some View {
+        HStack(spacing: 15) {
+            Image(systemName: symbol)
+                .font(.system(size: 24, weight: .medium))
+                .foregroundStyle(active ? Color.green : Color.orange)
+                .frame(width: 30)
+            VStack(alignment: .leading, spacing: 5) {
+                Text(title).font(.body.weight(.semibold)).foregroundStyle(.white)
+                Text(subtitle).font(.subheadline).foregroundStyle(.secondary)
+                    .lineLimit(2).truncationMode(.middle)
+            }
+            Spacer(minLength: 4)
+            Image(systemName: active ? "checkmark.circle.fill" : "exclamationmark.circle")
+                .foregroundStyle(active ? Color.green : Color.orange)
+                .accessibilityLabel(active ? "Готово" : "Требует внимания")
+        }
+        .padding(.vertical, 10)
+    }
+}
+
+struct FrameKitRouteRow: View {
+    let title: String
+    let subtitle: String
+    let symbol: String
+    var accent: Color = FrameKitStyle.blue
+
+    var body: some View {
+        HStack(spacing: 15) {
+            Image(systemName: symbol).font(.system(size: 25)).foregroundStyle(accent)
+                .frame(width: 32)
+            VStack(alignment: .leading, spacing: 5) {
+                Text(title).font(.body.weight(.semibold)).foregroundStyle(.white)
+                Text(subtitle).font(.subheadline).foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            Spacer(minLength: 4)
+            Image(systemName: "chevron.right").font(.caption.bold()).foregroundStyle(.secondary)
+        }
+        .padding(.vertical, 10)
+        .contentShape(Rectangle())
+    }
+}
+
 // MARK: - Root Tab View
 
 struct ContentView: View {
@@ -397,22 +491,24 @@ struct ContentView: View {
     var body: some View {
         TabView(selection: $vm.selectedTab) {
             PairingTab()
-                .tabItem { Label("Pairing", systemImage: "antenna.radiowaves.left.and.right") }
+                .tabItem { Label("Главная", systemImage: "antenna.radiowaves.left.and.right") }
                 .tag(AppTab.pairing)
 
             WalletCardsTab()
-                .tabItem { Label("Wallet Cards", systemImage: "creditcard.fill") }
+                .tabItem { Label("Карты", systemImage: "creditcard.fill") }
                 .tag(AppTab.walletCards)
 
             PasscodeThemeTab()
-                .tabItem { Label("Passcode", systemImage: "lock.circle.fill") }
+                .tabItem { Label("Темы", systemImage: "lock.circle.fill") }
                 .tag(AppTab.passcodeThemes)
 
             TendiesView()
-                .tabItem { Label("Wallpapers", systemImage: "photo.stack.fill") }
+                .tabItem { Label("Обои", systemImage: "photo.stack.fill") }
                 .tag(AppTab.wallpapers)
         }
-        .alert("Notice", isPresented: Binding(
+        .preferredColorScheme(.dark)
+        .tint(FrameKitStyle.blue)
+        .alert("Внимание", isPresented: Binding(
             get: { vm.errorMessage != nil },
             set: { if !$0 { vm.errorMessage = nil } }
         )) {
@@ -420,7 +516,7 @@ struct ContentView: View {
         } message: {
             Text(vm.errorMessage ?? "")
         }
-        .alert("Success! 🎉", isPresented: $vm.showSuccessAlert) {
+        .alert("Готово", isPresented: $vm.showSuccessAlert) {
             Button("OK") {}
         } message: {
             Text(vm.successAlertMessage)
@@ -445,355 +541,195 @@ struct PairingTab: View {
     @State private var showCredits = false
     @State private var showFilePicker = false
     @State private var showPairingGuide = false
+    @State private var showRespringConfirm = false
 
     private var isIOS27OrNewer: Bool {
         ProcessInfo.processInfo.operatingSystemVersion.majorVersion >= 27
     }
 
-    private var isPotentiallyPatchedOS: Bool {
-        let os = ProcessInfo.processInfo.operatingSystemVersion
-        if os.majorVersion > 27 { return true }
-        if os.majorVersion == 27 && os.minorVersion >= 3 { return true }
-        return false
+    private var version: String {
+        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.4.0"
     }
 
     var body: some View {
         NavigationStack {
             Form {
-                // Header
                 Section {
-                    VStack(alignment: .leading, spacing: 6) {
-                        HStack(spacing: 8) {
-                            Image(systemName: "creditcard.circle.fill")
-                                .font(.title2)
-                                .foregroundStyle(.blue)
-                            Text("FrameKit")
-                                .font(.title2.bold())
-                            Spacer()
-                            Text("iOS \(ProcessInfo.processInfo.operatingSystemVersion.majorVersion) · v1.3.2")
-                                .font(.caption.monospaced().bold())
-                                .padding(.horizontal, 8).padding(.vertical, 3)
-                                .background(Color.blue.opacity(0.12))
-                                .foregroundStyle(.blue)
-                                .clipShape(Capsule())
-                        }
-                        Text("Apply custom wallet card skins and passcode themes on-device. Supports iOS 18.0 – 27.2 beta 2 (iOS 27.2 beta 3+ patched).")
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-
-                        if isPotentiallyPatchedOS {
-                            HStack(alignment: .top, spacing: 8) {
-                                Image(systemName: "exclamationmark.triangle.fill")
-                                    .foregroundStyle(.orange)
-                                Text("iOS 27.2 beta 3 or newer detected: Apple patched the AirTraffic exploit on this version. Operations will likely fail.")
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                            }
-                            .padding(.top, 4)
-                        }
-                    }
-                    .padding(.vertical, 4)
+                    FrameKitHero(title: "Твой iPhone. Твой стиль.",
+                                 subtitle: "FrameKit \(version) · темы, обои и карты",
+                                 symbol: "viewfinder")
                 }
+                .listRowBackground(Color.clear)
+                .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
 
-                // Network / VPN Status
-                Section("Network") {
-                    VPNStatusRow(vm: vm)
-                }
-
-                // Pairing Status
-                Section("Active Pairing") {
-                    HStack(spacing: 10) {
-                        if vm.hasPairingFile {
-                            Image(systemName: "checkmark.seal.fill").foregroundStyle(.green)
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text("Ready to exploit ✅")
-                                    .font(.subheadline.bold())
-                                Text("\(vm.pairingFileName) (\(vm.pairingFileSizeString))")
-                                    .font(.caption.monospaced())
-                                    .foregroundStyle(.secondary)
-                            }
-                        } else {
-                            Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(.orange)
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text("Not Paired")
-                                    .font(.subheadline.bold())
-                                Text(isIOS27OrNewer
-                                     ? "Pair on this iPhone below or import a pairing file."
-                                     : "Import a pairing file from SideStore, iLoader, or PC below.")
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                            }
+                Section("Движок") {
+                    HStack(spacing: 14) {
+                        Image(systemName: "cpu").font(.title2).foregroundStyle(FrameKitStyle.blue)
+                        VStack(alignment: .leading, spacing: 5) {
+                            Text("Airlift").font(.headline)
+                            Text("Системный движок FrameKit").font(.subheadline).foregroundStyle(.secondary)
                         }
                         Spacer()
-                        if vm.hasPairingFile {
-                            Button(role: .destructive) {
-                                showDeleteConfirm = true
-                            } label: {
-                                Image(systemName: "trash")
-                                    .foregroundStyle(.red)
-                            }
-                            .buttonStyle(.borderless)
-                        }
+                        Text("ON DEVICE").font(.system(size: 11, weight: .bold, design: .monospaced))
+                            .foregroundStyle(FrameKitStyle.blue)
+                    }
+                    .padding(.vertical, 8)
+                    Text("Совместимость зависит от версии iOS. В исходном проекте заявлено: iOS 18 — 27.2 beta 2; с 27.2 beta 3 уязвимость исправлена.")
+                        .font(.footnote).foregroundStyle(.secondary)
+                }
+
+                Section("Подключение и сопряжение") {
+                    FrameKitStatusRow(title: vm.wifiUp ? "Wi-Fi подключён" : "Wi-Fi недоступен",
+                                      subtitle: "Беспроводной интерфейс", symbol: "wifi", active: vm.wifiUp)
+                    FrameKitStatusRow(title: vm.vpnUp ? "VPN-туннель активен" : "Нужен VPN-туннель",
+                                      subtitle: "Для работы нужен LocalDevVPN", symbol: "shield.lefthalf.filled", active: vm.vpnUp)
+                    FrameKitStatusRow(title: vm.hasPairingFile ? "Файл сопряжения готов" : "Сопряжение не настроено",
+                                      subtitle: vm.hasPairingFile ? "\(vm.pairingFileName) · \(vm.pairingFileSizeString)" : "Импортируй файл или создай его ниже",
+                                      symbol: "checkmark.seal", active: vm.hasPairingFile)
+
+                    Button { showFilePicker = true } label: {
+                        Label(vm.hasPairingFile ? "Заменить файл сопряжения" : "Импортировать файл сопряжения", systemImage: "square.and.arrow.down")
+                            .font(.body.weight(.semibold)).frame(maxWidth: .infinity, minHeight: 48)
+                    }
+                    .buttonStyle(.borderedProminent).tint(FrameKitStyle.purple)
+                    .padding(.vertical, 4)
+
+                    Button { showPairingGuide = true } label: {
+                        Label("Где взять файл?", systemImage: "questionmark.circle")
+                            .frame(minHeight: 44)
                     }
 
+                    DisclosureGroup("Настройки туннеля") {
+                        VPNStatusRow(vm: vm).padding(.vertical, 8)
+                    }
                     if vm.hasPairingFile {
-                        Button(role: .destructive) {
-                            showDeleteConfirm = true
-                        } label: {
-                            HStack {
-                                Spacer()
-                                Image(systemName: "trash.fill")
-                                Text("Delete Pairing File")
-                                Spacer()
-                            }
-                            .font(.subheadline.bold())
-                            .foregroundStyle(.red)
-                        }
-                    }
-                }
-                .confirmationDialog(
-                    "Delete pairing session?",
-                    isPresented: $showDeleteConfirm,
-                    titleVisibility: .visible
-                ) {
-                    Button("Delete Pairing", role: .destructive) { vm.deletePairingFile() }
-                    Button("Cancel", role: .cancel) {}
-                } message: {
-                    Text("The active pairing credentials will be removed so you can re-pair or import another file.")
-                }
-
-                // Pairing File Import (SideStore / iLoader / PC)
-                Section("Pairing File") {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Button {
-                            showFilePicker = true
-                        } label: {
-                            HStack(spacing: 8) {
-                                Image(systemName: "square.and.arrow.down.fill")
-                                    .foregroundStyle(.blue)
-                                Text("Import Pairing File…")
-                                    .font(.headline)
-                                Spacer()
-                                Image(systemName: "chevron.right")
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                            }
-                            .padding(.vertical, 4)
-                        }
-
-                        Button {
-                            showPairingGuide = true
-                        } label: {
-                            HStack(spacing: 6) {
-                                Image(systemName: "questionmark.circle")
-                                Text("Where to find SideStore / LiveContainer pairing file?")
-                            }
-                            .font(.footnote)
-                            .foregroundStyle(.blue)
-                        }
-                        .buttonStyle(.plain)
-
-                        Text("Supports .mobiledevicepairing, .plist, or .mobilepair exported from SideStore, iLoader, AltStore, Jitterbug, or Mac/PC.")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-
-                    if !vm.documentsPlistFiles.isEmpty {
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text("Discovered in Documents:")
-                                .font(.caption.bold())
-                                .foregroundStyle(.secondary)
-
-                            ForEach(vm.documentsPlistFiles, id: \.self) { filename in
-                                HStack {
-                                    Image(systemName: "doc.text.fill")
-                                        .foregroundStyle(.blue)
-                                    Text(filename)
-                                        .font(.caption.monospaced())
-                                        .lineLimit(1)
-                                        .truncationMode(.middle)
-                                    Spacer()
-                                    Button("Use") {
-                                        vm.selectPairingFile(filename: filename)
-                                    }
-                                    .buttonStyle(.bordered)
-                                    .controlSize(.small)
-                                }
-                            }
-                        }
-                        .padding(.vertical, 4)
+                        Button("Удалить активное сопряжение", role: .destructive) { showDeleteConfirm = true }
+                            .frame(minHeight: 44)
                     }
                 }
 
-                // On-Device Pairing Section (shown ONLY on iOS 27+)
                 if isIOS27OrNewer {
-                    Section("Pair on This iPhone") {
+                    Section("Сопряжение на iPhone") {
                         if vm.pairingPhase == .pairing {
-                            VStack(alignment: .leading, spacing: 12) {
-                                HStack(spacing: 8) {
-                                    ProgressView().scaleEffect(0.85)
-                                    Text(vm.pairingStatus.isEmpty ? "Starting local pairing host…" : vm.pairingStatus)
-                                        .font(.subheadline)
-                                        .foregroundStyle(.secondary)
-                                }
-
-                                if let pin = vm.pairingPIN {
-                                    VStack(alignment: .leading, spacing: 12) {
-                                        Text("ENTER THIS PIN ON THIS IPHONE:")
-                                            .font(.caption2.bold().uppercaseSmallCaps())
-                                            .foregroundStyle(.secondary)
-
-                                        HStack(alignment: .center, spacing: 0) {
-                                            Text(pin)
-                                                .font(.system(size: 40, weight: .black, design: .monospaced))
-                                                .foregroundStyle(.orange)
-                                            Spacer()
-                                            Button {
-                                                UIPasteboard.general.string = pin
-                                                UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-                                            } label: {
-                                                Label("Copy", systemImage: "doc.on.doc")
-                                                    .font(.caption.bold())
-                                            }
-                                            .buttonStyle(.bordered)
-                                            .tint(.orange)
-                                        }
-
-                                        Text("Settings › Privacy & Security › Developer Mode › Pair with FrameKit")
-                                            .font(.footnote.weight(.semibold))
-                                            .foregroundStyle(.primary)
-
-                                        Button {
-                                            if let url = URL(string: UIApplication.openSettingsURLString) {
-                                                UIApplication.shared.open(url)
-                                            }
-                                        } label: {
-                                            Label("Open Settings App Now", systemImage: "arrow.up.forward.app")
-                                                .bold()
-                                                .frame(maxWidth: .infinity, alignment: .center)
-                                        }
-                                        .buttonStyle(.borderedProminent)
-                                        .tint(.orange)
-                                    }
-                                    .padding(14)
-                                    .background(Color.orange.opacity(0.12))
-                                    .clipShape(RoundedRectangle(cornerRadius: 14))
-                                }
-
-                                Button(role: .cancel) {
-                                    vm.cancelPairing()
-                                } label: {
-                                    HStack(spacing: 8) {
-                                        Spacer()
-                                        Image(systemName: "xmark")
-                                        Text("Cancel Pairing")
-                                        Spacer()
-                                    }
-                                    .font(.headline)
-                                    .frame(maxWidth: .infinity)
-                                    .frame(height: 44)
-                                }
-                                .buttonStyle(.bordered)
-                                .tint(.red)
+                            HStack(spacing: 12) {
+                                ProgressView()
+                                Text(vm.pairingStatus.isEmpty ? "Запуск сопряжения…" : vm.pairingStatus)
+                                    .font(.subheadline).foregroundStyle(.secondary)
                             }
+                            if let pin = vm.pairingPIN {
+                                VStack(alignment: .leading, spacing: 12) {
+                                    Text("PIN для сопряжения").font(.subheadline).foregroundStyle(.secondary)
+                                    HStack {
+                                        Text(pin).font(.system(size: 36, weight: .bold, design: .monospaced))
+                                            .foregroundStyle(FrameKitStyle.blue)
+                                        Spacer()
+                                        Button { UIPasteboard.general.string = pin } label: {
+                                            Image(systemName: "doc.on.doc").frame(width: 44, height: 44)
+                                        }.accessibilityLabel("Скопировать PIN")
+                                    }
+                                    Text("Настройки → Конфиденциальность и безопасность → Режим разработчика → Сопряжение с FrameKit")
+                                        .font(.subheadline).foregroundStyle(.secondary)
+                                    Button("Открыть настройки приложения") {
+                                        if let url = URL(string: UIApplication.openSettingsURLString) {
+                                            UIApplication.shared.open(url)
+                                        }
+                                    }.frame(minHeight: 44)
+                                }.padding(.vertical, 8)
+                            }
+                            Button("Отменить сопряжение", role: .cancel) { vm.cancelPairing() }
+                                .frame(minHeight: 44)
                         } else {
-                            VStack(spacing: 12) {
-                                if !vm.pairingStatus.isEmpty && vm.pairingStatus != "idle" {
-                                    Text(vm.pairingStatus)
-                                        .font(.subheadline.weight(.medium))
-                                        .foregroundStyle(
-                                            vm.pairingStatus.contains("✅") ? .green :
-                                            vm.pairingStatus.contains("❌") || vm.pairingStatus.contains("failed") ? .red :
-                                            .secondary
-                                        )
-                                        .multilineTextAlignment(.center)
-                                        .frame(maxWidth: .infinity, alignment: .center)
-                                }
-
-                                Button {
-                                    vm.startPairing()
-                                } label: {
-                                    HStack(spacing: 8) {
-                                        Spacer()
-                                        Image(systemName: "antenna.radiowaves.left.and.right")
-                                            .font(.body.weight(.semibold))
-                                        Text(vm.hasPairingFile ? "Re-Pair This iPhone" : "Pair This iPhone")
-                                            .font(.headline)
-                                        Spacer()
-                                    }
-                                    .frame(maxWidth: .infinity)
-                                    .frame(height: 48)
-                                }
-                                .buttonStyle(.borderedProminent)
+                            Button { vm.startPairing() } label: {
+                                Label(vm.hasPairingFile ? "Создать сопряжение заново" : "Создать сопряжение", systemImage: "antenna.radiowaves.left.and.right")
+                                    .font(.body.weight(.semibold)).frame(maxWidth: .infinity, minHeight: 48)
+                            }.buttonStyle(.borderedProminent).padding(.vertical, 4)
+                            if !vm.pairingStatus.isEmpty && vm.pairingStatus != "idle" {
+                                Text(vm.pairingStatus).font(.subheadline).foregroundStyle(.secondary)
+                                    .textSelection(.enabled)
                             }
-                            .listRowInsets(EdgeInsets(top: 12, leading: 14, bottom: 12, trailing: 14))
                         }
                     }
                 }
 
+                if !vm.documentsPlistFiles.isEmpty {
+                    Section("Файлы в папке приложения") {
+                        ForEach(vm.documentsPlistFiles, id: \.self) { filename in
+                            Button { vm.selectPairingFile(filename: filename) } label: {
+                                Label(filename, systemImage: "doc.text").lineLimit(2)
+                            }.frame(minHeight: 44)
+                        }
+                    }
+                }
+
+                Section("Персонализация") {
+                    Button { vm.selectedTab = .passcodeThemes } label: {
+                        FrameKitRouteRow(title: "Экран код-пароля", subtitle: "Темы .passthm и свои изображения", symbol: "circle.grid.3x3.fill")
+                    }.buttonStyle(.plain)
+                    Button { vm.selectedTab = .wallpapers } label: {
+                        FrameKitRouteRow(title: "Анимированные обои", subtitle: "Импорт и применение .tendies", symbol: "photo.stack.fill", accent: FrameKitStyle.purple)
+                    }.buttonStyle(.plain)
+                    Button { vm.selectedTab = .walletCards } label: {
+                        FrameKitRouteRow(title: "Карты Wallet", subtitle: "Собственное оформление карт", symbol: "creditcard.fill")
+                    }.buttonStyle(.plain)
+                }
+
+                Section("Действия") {
+                    Button { showRespringConfirm = true } label: {
+                        Label("Перезапустить интерфейс", systemImage: "arrow.clockwise.circle.fill")
+                            .font(.body.weight(.semibold)).frame(minHeight: 48)
+                    }
+                    Button { vm.refreshNetworkStatus(); vm.refreshPairingFile() } label: {
+                        Label("Обновить состояние", systemImage: "arrow.triangle.2.circlepath")
+                            .frame(minHeight: 44)
+                    }
+                }
                 if !vm.log.isEmpty {
-                    Section {
-                        CompactLogView(
-                            title: "Activity Log (\(vm.log.count) lines)",
-                            lines: vm.log,
-                            onClear: { vm.log.removeAll() }
-                        )
+                    Section("Диагностика") {
+                        CompactLogView(title: "Журнал подключения", lines: vm.log, onClear: { vm.log.removeAll() })
                     }
                 }
             }
-            .safeAreaInset(edge: .bottom) {
-                Color.clear.frame(height: 60)
-            }
+            .modifier(FrameKitFormStyle())
             .navigationTitle("FrameKit")
-            .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button {
-                        showCredits = true
-                    } label: {
-                        HStack(spacing: 4) {
-                            Image(systemName: "info.circle")
-                                .font(.caption)
-                            Text("About FrameKit")
-                                .font(.caption.bold())
-                        }
-                        .foregroundStyle(.blue)
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 5)
-                        .background(Color.blue.opacity(0.12))
-                        .clipShape(Capsule())
-                    }
+                    Button { showCredits = true } label: { Image(systemName: "info.circle") }
+                        .accessibilityLabel("О FrameKit")
                 }
             }
-            .sheet(isPresented: $showCredits) {
-                CreditsSheet()
-            }
+            .confirmationDialog("Удалить сопряжение?", isPresented: $showDeleteConfirm, titleVisibility: .visible) {
+                Button("Удалить", role: .destructive) { vm.deletePairingFile() }
+                Button("Отмена", role: .cancel) {}
+            } message: { Text("Для работы потребуется создать или импортировать другой файл сопряжения.") }
+            .confirmationDialog("Перезапустить интерфейс iPhone?", isPresented: $showRespringConfirm, titleVisibility: .visible) {
+                Button("Перезапустить", role: .destructive) { vm.respringDevice() }
+                Button("Отмена", role: .cancel) {}
+            } message: { Text("NeoSpring временно прервёт работу интерфейса. Сохрани открытые данные.") }
+            .sheet(isPresented: $showCredits) { CreditsSheet() }
             .sheet(isPresented: $showFilePicker) {
                 DocumentPickerView(allowedContentTypes: [
                     UTType(filenameExtension: "mobiledevicepairing") ?? .data,
                     UTType(filenameExtension: "plist") ?? .propertyList,
                     UTType(filenameExtension: "mobilepair") ?? .data,
-                    .propertyList,
-                    .data,
-                    .item
+                    .propertyList, .data, .item
                 ]) { url in
                     _ = vm.importPairingFile(from: url, originalName: url.lastPathComponent)
                 }
             }
             .sheet(isPresented: $showPairingGuide) {
                 PairingGuideSheet {
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                        showFilePicker = true
-                    }
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { showFilePicker = true }
                 }
             }
-            .onAppear {
-                vm.refreshNetworkStatus()
-                vm.refreshPairingFile()
-            }
-            .refreshable {
-                vm.refreshNetworkStatus()
-                vm.refreshPairingFile()
+            .onAppear { vm.refreshNetworkStatus(); vm.refreshPairingFile() }
+            .refreshable { vm.refreshNetworkStatus(); vm.refreshPairingFile() }
+            .overlay {
+                if vm.isNeoSpringing {
+                    ZStack {
+                        Color.black.ignoresSafeArea()
+                        NeoSpringView().brightness(-1.0).ignoresSafeArea()
+                    }
+                }
             }
         }
     }
@@ -1079,7 +1015,7 @@ struct WalletCardView: View {
             Button("Save") {
                 onRename?(renameText)
             }
-            Button("Cancel", role: .cancel) {}
+            Button("Отмена", role: .cancel) {}
         } message: {
             Text("Enter a custom display name or bank name for this card.")
         }
@@ -1121,7 +1057,9 @@ struct WalletCardsTab: View {
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(spacing: 16) {
+                VStack(spacing: 24) {
+                    FrameKitHero(title: "Карты с характером", subtitle: "Твои изображения для Wallet", symbol: "creditcard.fill")
+                        .padding(.horizontal, 24)
                     scannerBanner
 
                     if vm.cards.isEmpty {
@@ -1135,11 +1073,10 @@ struct WalletCardsTab: View {
                 .transaction { $0.animation = nil }
             }
             .transaction { $0.animation = nil }
-            .safeAreaInset(edge: .bottom) {
-                Color.clear.frame(height: 60)
-            }
-            .background(Color(uiColor: .systemGroupedBackground))
-            .navigationTitle("Wallet Cards (\(vm.cards.count))")
+            .modifier(FrameKitFormStyle())
+            .background(Color.black)
+            .navigationTitle("Карты Wallet")
+            .navigationBarTitleDisplayMode(.large)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button {
@@ -1147,7 +1084,7 @@ struct WalletCardsTab: View {
                     } label: {
                         HStack(spacing: 4) {
                             Image(systemName: vm.isScanningCards ? "stop.circle.fill" : "wave.3.left.circle")
-                            Text(vm.isScanningCards ? "Stop Scan" : "Scan Cards")
+                            Text(vm.isScanningCards ? "Стоп" : "Сканировать")
                         }
                         .font(.subheadline.bold())
                         .foregroundStyle(vm.isScanningCards ? .red : .blue)
@@ -1159,14 +1096,14 @@ struct WalletCardsTab: View {
                         Button {
                             showAddSheet = true
                         } label: {
-                            Label("Add Card Manually", systemImage: "plus")
+                            Label("Добавить карту вручную", systemImage: "plus")
                         }
                         if !vm.cards.isEmpty {
                             Button {
                                 activePicker = .bulkAll
                                 showSourceDialog = true
                             } label: {
-                                Label("Set Skin for All Cards...", systemImage: "photo.on.rectangle.angled")
+                                Label("Оформить все карты", systemImage: "photo.on.rectangle.angled")
                             }
 
                             Divider()
@@ -1174,13 +1111,13 @@ struct WalletCardsTab: View {
                             Button {
                                 vm.selectAllCards(true)
                             } label: {
-                                Label("Select All", systemImage: "checkmark.circle")
+                                Label("Выбрать все", systemImage: "checkmark.circle")
                             }
 
                             Button {
                                 vm.selectAllCards(false)
                             } label: {
-                                Label("Deselect All", systemImage: "circle")
+                                Label("Снять выбор", systemImage: "circle")
                             }
 
                             Divider()
@@ -1190,7 +1127,7 @@ struct WalletCardsTab: View {
                                     vm.clearAllCards()
                                 }
                             } label: {
-                                Label("Clear All Cards", systemImage: "trash")
+                                Label("Удалить все карты", systemImage: "trash")
                             }
 
                             Divider()
@@ -1198,7 +1135,7 @@ struct WalletCardsTab: View {
                             Button {
                                 showCredits = true
                             } label: {
-                                Label("About FrameKit", systemImage: "info.circle")
+                                Label("О FrameKit", systemImage: "info.circle")
                             }
                         }
                     } label: {
@@ -1221,18 +1158,18 @@ struct WalletCardsTab: View {
                     showAddSheet = false
                 }
             }
-            .confirmationDialog("Choose Image Source", isPresented: $showSourceDialog, titleVisibility: .visible) {
+            .confirmationDialog("Источник изображения", isPresented: $showSourceDialog, titleVisibility: .visible) {
                 Button {
                     isPhotosPickerPresented = true
                 } label: {
-                    Label("Photo Library", systemImage: "photo.on.rectangle")
+                    Label("Медиатека", systemImage: "photo.on.rectangle")
                 }
                 Button {
                     isDocumentPickerPresented = true
                 } label: {
-                    Label("Choose from Files…", systemImage: "folder")
+                    Label("Выбрать из файлов…", systemImage: "folder")
                 }
-                Button("Cancel", role: .cancel) {
+                Button("Отмена", role: .cancel) {
                     activePicker = nil
                 }
             }
@@ -1391,17 +1328,17 @@ struct WalletCardsTab: View {
                     ProgressView()
                         .progressViewStyle(CircularProgressViewStyle(tint: .white))
                         .scaleEffect(0.75)
-                    Text("Flashing…")
+                    Text("Применение…")
                         .font(.system(size: 13, weight: .semibold))
                 } else if case .done(let ok) = vm.cardFlashPhase, !ok {
                     Image(systemName: "arrow.clockwise")
                         .font(.system(size: 12, weight: .semibold))
-                    Text("Retry")
+                    Text("Повторить")
                         .font(.system(size: 13, weight: .semibold))
                 } else {
                     Image(systemName: "bolt.fill")
                         .font(.system(size: 12, weight: .semibold))
-                    Text("Flash")
+                    Text("Применить")
                         .font(.system(size: 13, weight: .semibold))
                 }
             }
@@ -1425,7 +1362,7 @@ struct WalletCardsTab: View {
                 .font(.system(size: 56))
                 .foregroundStyle(.blue.opacity(0.8))
 
-            Text("No Cards Detected Yet")
+            Text("Пока нет карт")
                 .font(.title3.bold())
 
             VStack(alignment: .leading, spacing: 10) {
@@ -1433,19 +1370,19 @@ struct WalletCardsTab: View {
                     Text("1.")
                         .bold()
                         .foregroundStyle(.blue)
-                    Text("Tap **Scan Cards** in the toolbar above.")
+                    Text("Нажми **Сканировать** вверху экрана.")
                 }
                 HStack(alignment: .top, spacing: 10) {
                     Text("2.")
                         .bold()
                         .foregroundStyle(.blue)
-                    Text("On this iPhone, **double-click the Side button** (Apple Pay), authenticate with **Face ID**, and **tap your card**.")
+                    Text("Открой Wallet **двойным нажатием боковой кнопки**, подтверди Face ID и выбери карту.")
                 }
                 HStack(alignment: .top, spacing: 10) {
                     Text("3.")
                         .bold()
                         .foregroundStyle(.blue)
-                    Text("Your card will appear here automatically!")
+                    Text("Карта появится здесь автоматически.")
                 }
             }
             .font(.subheadline)
@@ -1462,7 +1399,7 @@ struct WalletCardsTab: View {
                     HStack(spacing: 6) {
                         Spacer()
                         Image(systemName: vm.isScanningCards ? "stop.circle.fill" : "wave.3.left.circle")
-                        Text(vm.isScanningCards ? "Stop Scan" : "Scan Cards")
+                        Text(vm.isScanningCards ? "Стоп" : "Сканировать")
                         Spacer()
                     }
                     .font(.headline)
@@ -1479,7 +1416,7 @@ struct WalletCardsTab: View {
                     HStack(spacing: 6) {
                         Spacer()
                         Image(systemName: "plus")
-                        Text("Add Manually")
+                        Text("Вручную")
                         Spacer()
                     }
                     .font(.headline)
@@ -1524,7 +1461,7 @@ struct AddCardSheet: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Cancel") { dismiss() }
+                    Button("Отмена") { dismiss() }
                 }
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Add") { onAdd() }
@@ -1546,11 +1483,17 @@ struct PasscodeThemeTab: View {
     var body: some View {
         NavigationStack {
             Form {
+                Section {
+                    FrameKitHero(title: "Экран код-пароля", subtitle: "Импортируй тему или создай свою", symbol: "circle.grid.3x3.fill")
+                }
+                .listRowBackground(Color.clear)
+                .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
+
                 // Mode picker
                 Section {
-                    Picker("Mode", selection: $vm.passcodeMode) {
+                    Picker("Режим", selection: $vm.passcodeMode) {
                         ForEach(CreatorMode.allCases) { mode in
-                            Text(mode.rawValue).tag(mode)
+                            Text(mode == .applyTheme ? "Готовая тема" : "Создать свою").tag(mode)
                         }
                     }
                     .pickerStyle(.segmented)
@@ -1559,16 +1502,16 @@ struct PasscodeThemeTab: View {
                 if vm.passcodeMode == .applyTheme {
                     ApplyThemeSection(onImport: {
                         vm.themeImportError = nil
-                        vm.themeImportStatus = "File picker opened. Select one .passthm and tap Open."
+                        vm.themeImportStatus = "Выбери один файл .passthm и нажми «Открыть»."
                         showThemeFileImporter = true
                     })
                 } else {
                     ThemeCreatorSection()
                 }
 
-                Section("Theme import • FrameKit 1.3.6 (5)") {
+                Section("Состояние импорта") {
                     if vm.isImportingTheme {
-                        ProgressView("Reading theme…")
+                        ProgressView("Чтение темы…")
                     }
                     if !vm.themeImportStatus.isEmpty {
                         Text(vm.themeImportStatus)
@@ -1583,7 +1526,7 @@ struct PasscodeThemeTab: View {
                             .textSelection(.enabled)
                     }
                     if let theme = vm.loadedTheme {
-                        Text("Loaded: \(theme.name) • \(theme.keysPreview.count) keys")
+                        Text("Загружено: \(theme.name) · кнопок: \(theme.keysPreview.count)")
                             .font(.footnote.bold())
                             .foregroundStyle(.green)
                     }
@@ -1600,10 +1543,8 @@ struct PasscodeThemeTab: View {
                     }
                 }
             }
-            .safeAreaInset(edge: .bottom) {
-                Color.clear.frame(height: 60)
-            }
-            .navigationTitle("Passcode Theme")
+            .modifier(FrameKitFormStyle())
+            .navigationTitle("Темы пароля")
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button {
@@ -1638,7 +1579,7 @@ struct ApplyThemeSection: View {
     var body: some View {
         // Themes dropped directly into Documents folder
         if !vm.documentsThemes.isEmpty {
-            Section("Themes in App Folder (On My iPhone › FrameKit)") {
+            Section("Темы в папке FrameKit") {
                 ForEach(vm.documentsThemes, id: \.self) { file in
                     HStack {
                         Image(systemName: "paintpalette.fill")
@@ -1646,7 +1587,7 @@ struct ApplyThemeSection: View {
                         Text(file)
                             .font(.system(size: 13, design: .monospaced))
                         Spacer()
-                        Button("Load") {
+                        Button("Загрузить") {
                             vm.loadPassthmFromDocuments(filename: file)
                         }
                         .font(.caption.bold())
@@ -1657,12 +1598,12 @@ struct ApplyThemeSection: View {
             }
         }
 
-        Section("Browse Files") {
+        Section("Импорт темы") {
             HStack {
                 Button {
                     onImport()
                 } label: {
-                    Label(vm.loadedTheme == nil ? "Choose .passthm from Files…" : "Change .passthm…",
+                    Label(vm.loadedTheme == nil ? "Импорт .passthm" : "Заменить .passthm",
                           systemImage: "doc.badge.plus")
                         .frame(maxWidth: .infinity, alignment: .center)
                 }
@@ -1671,7 +1612,7 @@ struct ApplyThemeSection: View {
                     Button {
                         vm.clearLoadedTheme()
                     } label: {
-                        Text("Clear")
+                        Text("Очистить")
                             .font(.caption.bold())
                             .foregroundStyle(.red)
                     }
@@ -1681,27 +1622,39 @@ struct ApplyThemeSection: View {
             .disabled(vm.isImportingTheme)
 
 
-            Text("Select one .passthm file and tap Open. No pairing is required just to import a theme.")
+            Text("Выбери один .passthm и нажми «Открыть». Для просмотра темы сопряжение не требуется.")
                 .font(.footnote)
                 .foregroundStyle(.secondary)
 
         }
 
+        if vm.loadedTheme == nil {
+            Section("Интерактивное превью") {
+                VStack(spacing: 16) {
+                    Image(systemName: "circle.grid.3x3.fill")
+                        .font(.system(size: 48, weight: .light)).foregroundStyle(FrameKitStyle.blue.opacity(0.7))
+                    Text("Твоя тема появится здесь").font(.headline)
+                    Text("Импортируй .passthm или открой «Создать свою», чтобы добавить изображение.")
+                        .font(.subheadline).foregroundStyle(.secondary).multilineTextAlignment(.center)
+                }.frame(maxWidth: .infinity).padding(.vertical, 28)
+            }
+        }
+
         if let theme = vm.loadedTheme {
-            Section("Interactive Lock Screen Preview") {
+            Section("Интерактивное превью") {
                 KeypadPreviewView(keys: theme.keysPreview)
                     .listRowInsets(EdgeInsets(top: 6, leading: 6, bottom: 6, trailing: 6))
                     .listRowBackground(Color.clear)
             }
 
-            Section("Theme Information") {
-                LabeledContent("Files in theme", value: "\(theme.fileCount)")
-                LabeledContent("Digits styled", value: "\(theme.keysPreview.count) keys")
+            Section("О теме") {
+                LabeledContent("Файлов в теме", value: "\(theme.fileCount)")
+                LabeledContent("Кнопок", value: "\(theme.keysPreview.count) keys")
 
                 Button {
                     vm.adoptThemeIntoCreator()
                 } label: {
-                    Label("Edit in Theme Creator", systemImage: "pencil")
+                    Label("Редактировать тему", systemImage: "pencil")
                         .frame(maxWidth: .infinity, alignment: .center)
                 }
                 .buttonStyle(.bordered)
@@ -1719,7 +1672,7 @@ struct ApplyThemeSection: View {
                         HStack(spacing: 8) {
                             Spacer()
                             Image(systemName: "trash")
-                            Text("Remove / Unload Theme")
+                            Text("Выгрузить тему")
                             Spacer()
                         }
                         .font(.headline)
@@ -1740,7 +1693,7 @@ struct ApplyThemeSection: View {
             HStack(spacing: 10) {
                 ProgressView()
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Flashing Theme…").font(.subheadline.bold())
+                    Text("Применение темы…").font(.subheadline.bold())
                     ProgressView(value: vm.passthmFlashProgress)
                 }
             }
@@ -1752,7 +1705,7 @@ struct ApplyThemeSection: View {
                 HStack(spacing: 8) {
                     Spacer()
                     Image(systemName: "arrow.clockwise")
-                    Text("Retry Flash Theme")
+                    Text("Повторить применение")
                     Spacer()
                 }
                 .font(.headline)
@@ -1769,7 +1722,7 @@ struct ApplyThemeSection: View {
                 HStack(spacing: 8) {
                     Spacer()
                     Image(systemName: "bolt.fill")
-                    Text("Flash Theme to iPhone")
+                    Text("Применить тему")
                     Spacer()
                 }
                 .font(.headline)
@@ -1794,16 +1747,16 @@ struct PasscodeTargetSection: View {
                     Image(systemName: "bolt.badge.clock")
                         .foregroundColor(.blue)
                         .font(.headline)
-                    Text("Flash & Language Target")
+                    Text("Параметры применения")
                         .font(.headline)
                 }
 
                 // 1. Target System
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("System Caches")
+                    Text("Системный кэш")
                         .font(.caption.bold())
                         .foregroundColor(.secondary)
-                    Picker("System Caches", selection: $vm.targetTelephonyVersion) {
+                    Picker("Системный кэш", selection: $vm.targetTelephonyVersion) {
                         Text("TelephonyUI-10 (iOS 18+)").tag("TelephonyUI-10")
                         Text("TelephonyUI-9 (iOS 16–17)").tag("TelephonyUI-9")
                         Text("TelephonyUI-8 (iOS 14–15)").tag("TelephonyUI-8")
@@ -1817,10 +1770,10 @@ struct PasscodeTargetSection: View {
 
                 // 2. System Language
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("System Language")
+                    Text("Язык код-пароля")
                         .font(.caption.bold())
                         .foregroundColor(.secondary)
-                    Picker("System Language", selection: $vm.passcodeLanguageTarget) {
+                    Picker("Язык код-пароля", selection: $vm.passcodeLanguageTarget) {
                         ForEach(PasscodeLanguageTarget.allCases) { item in
                             Text(item.rawValue).tag(item)
                         }
@@ -1833,10 +1786,10 @@ struct PasscodeTargetSection: View {
 
                 // 3. Font Weight / Style
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Font Weight / Style")
+                    Text("Стиль шрифта")
                         .font(.caption.bold())
                         .foregroundColor(.secondary)
-                    Picker("Font Weight / Style", selection: $vm.passcodeBoldTarget) {
+                    Picker("Стиль шрифта", selection: $vm.passcodeBoldTarget) {
                         ForEach(PasscodeBoldTarget.allCases) { item in
                             Text(item.rawValue).tag(item)
                         }
@@ -1886,10 +1839,10 @@ struct ThemeCreatorSection: View {
     @State private var selectedPoster: [PhotosPickerItem] = []
 
     var body: some View {
-        Section("Slice Mode") {
+        Section("Источник оформления") {
             Picker("", selection: $vm.sliceMode) {
                 ForEach(SliceMode.allCases) { m in
-                    Text(m.rawValue).tag(m)
+                    Text(m == .posterSlice ? "Изображение" : "Отдельные кнопки").tag(m)
                 }
             }
             .pickerStyle(.segmented)
@@ -1902,7 +1855,7 @@ struct ThemeCreatorSection: View {
         }
 
         // Preview
-        Section("Interactive Lock Screen Preview") {
+        Section("Интерактивное превью") {
             KeypadPreviewView(keys: vm.effectiveKeys)
                 .listRowInsets(EdgeInsets(top: 6, leading: 6, bottom: 6, trailing: 6))
                 .listRowBackground(Color.clear)
@@ -1922,7 +1875,7 @@ struct ThemeCreatorSection: View {
                         HStack(spacing: 8) {
                             Spacer()
                             Image(systemName: "square.and.arrow.up")
-                            Text("Export .passthm...")
+                            Text("Экспорт .passthm")
                             Spacer()
                         }
                         .font(.headline)
@@ -1937,7 +1890,7 @@ struct ThemeCreatorSection: View {
                         HStack(spacing: 8) {
                             Spacer()
                             Image(systemName: "trash")
-                            Text("Clear All")
+                            Text("Очистить всё")
                             Spacer()
                         }
                         .font(.headline)
@@ -1954,27 +1907,27 @@ struct ThemeCreatorSection: View {
 
     private var posterSliceSection: some View {
         Group {
-            Section("Poster Image") {
+            Section("Изображение для клавиатуры") {
                 Button {
                     showPosterSourceDialog = true
                 } label: {
-                    Label(vm.posterImage == nil ? "Select Photo for Keypad…" : "Change Photo…",
+                    Label(vm.posterImage == nil ? "Добавить изображение" : "Заменить изображение",
                           systemImage: "photo")
                         .frame(maxWidth: .infinity, alignment: .center)
                 }
             }
-            .confirmationDialog("Choose Poster Image Source", isPresented: $showPosterSourceDialog, titleVisibility: .visible) {
+            .confirmationDialog("Источник изображения", isPresented: $showPosterSourceDialog, titleVisibility: .visible) {
                 Button {
                     isPosterPhotosPickerPresented = true
                 } label: {
-                    Label("Photo Library", systemImage: "photo.on.rectangle")
+                    Label("Медиатека", systemImage: "photo.on.rectangle")
                 }
                 Button {
                     isPosterDocumentPickerPresented = true
                 } label: {
-                    Label("Choose from Files…", systemImage: "folder")
+                    Label("Выбрать из файлов…", systemImage: "folder")
                 }
-                Button("Cancel", role: .cancel) {}
+                Button("Отмена", role: .cancel) {}
             }
             .photosPicker(
                 isPresented: $isPosterPhotosPickerPresented,
@@ -2005,18 +1958,18 @@ struct ThemeCreatorSection: View {
             }
 
             if vm.posterImage != nil {
-                Section("Slicing Style") {
+                Section("Форма кнопок") {
                     VStack(alignment: .leading, spacing: 6) {
                         Picker("", selection: $vm.maskToCircles) {
-                            Text("Seamless Poster").tag(false)
-                            Text("Circle Buttons").tag(true)
+                            Text("Цельное изображение").tag(false)
+                            Text("Кружки").tag(true)
                         }
                         .pickerStyle(.segmented)
                         .onChange(of: vm.maskToCircles) { _, _ in
                             vm.updatePosterSlicing()
                         }
 
-                        Text(vm.maskToCircles ? "Artwork is clipped into individual circular button icons." : "Seamless artwork spans across dialer keys without circular cuts (Adobe Dog style).")
+                        Text(vm.maskToCircles ? "Изображение обрезается по форме круглых кнопок." : "Цельное изображение без круглой обрезки, распределённое по клавишам.")
                             .font(.caption2)
                             .foregroundColor(.secondary)
                             .fixedSize(horizontal: false, vertical: true)
@@ -2027,11 +1980,11 @@ struct ThemeCreatorSection: View {
                 Section {
                     VStack(alignment: .leading, spacing: 8) {
                         HStack {
-                            Text("Zoom & Framing")
+                            Text("Масштаб и положение")
                                 .font(.caption.bold())
                                 .foregroundColor(.secondary)
                             Spacer()
-                            Button("Reset Position") {
+                            Button("Сбросить положение") {
                                 withAnimation(.spring()) {
                                     vm.resetPosterPosition()
                                 }
@@ -2136,14 +2089,14 @@ struct ThemeCreatorSection: View {
             Button {
                 isKeyPhotosPickerPresented = true
             } label: {
-                Label("Photo Library", systemImage: "photo.on.rectangle")
+                Label("Медиатека", systemImage: "photo.on.rectangle")
             }
             Button {
                 isKeyDocumentPickerPresented = true
             } label: {
-                Label("Choose from Files…", systemImage: "folder")
+                Label("Выбрать из файлов…", systemImage: "folder")
             }
-            Button("Cancel", role: .cancel) {
+            Button("Отмена", role: .cancel) {
                 selectedDigitForPicker = nil
             }
         }
@@ -2192,7 +2145,7 @@ struct ThemeCreatorSection: View {
             HStack(spacing: 10) {
                 ProgressView()
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Flashing Theme…").font(.subheadline.bold())
+                    Text("Применение темы…").font(.subheadline.bold())
                     ProgressView(value: vm.passthmFlashProgress)
                 }
             }
@@ -2204,7 +2157,7 @@ struct ThemeCreatorSection: View {
                 HStack(spacing: 8) {
                     Spacer()
                     Image(systemName: "arrow.clockwise")
-                    Text("Retry Flash Theme")
+                    Text("Повторить применение")
                     Spacer()
                 }
                 .font(.headline)
@@ -2221,7 +2174,7 @@ struct ThemeCreatorSection: View {
                 HStack(spacing: 8) {
                     Spacer()
                     Image(systemName: "bolt.fill")
-                    Text("Flash Theme to iPhone")
+                    Text("Применить тему")
                     Spacer()
                 }
                 .font(.headline)

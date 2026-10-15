@@ -26,6 +26,11 @@ struct TendiesView: View {
     var body: some View {
         NavigationStack {
             Form {
+                Section {
+                    FrameKitHero(title: "Обои в движении", subtitle: "Анимация для экрана блокировки", symbol: "photo.stack.fill", accent: FrameKitStyle.purple)
+                }
+                .listRowBackground(Color.clear)
+                .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
                 // Notice Banners
                 if let err = vm.errorMessage {
                     Section {
@@ -54,7 +59,7 @@ struct TendiesView: View {
                         HStack(spacing: 8) {
                             Spacer()
                             Image(systemName: "doc.badge.plus")
-                            Text(vm.tendieItems.isEmpty ? "Choose .tendies from Files…" : "Import More Wallpapers…")
+                            Text(vm.tendieItems.isEmpty ? "Импорт .tendies" : "Добавить обои")
                             Spacer()
                         }
                         .font(.headline)
@@ -62,12 +67,12 @@ struct TendiesView: View {
                         .frame(height: 48)
                     }
                     .buttonStyle(.borderedProminent)
-                    .tint(.blue)
+                    .tint(FrameKitStyle.purple)
                 } footer: {
                     if vm.posterBoardContainer.isEmpty {
-                        Text("PosterBoard container will be auto-detected automatically on flash.")
+                        Text("Контейнер PosterBoard определяется автоматически при применении.")
                     } else {
-                        Text("Target: PosterBoard container detected ✅")
+                        Text("Контейнер PosterBoard найден")
                     }
                 }
 
@@ -75,10 +80,10 @@ struct TendiesView: View {
                 Section {
                     Toggle(isOn: $vm.resetPBProtections) {
                         VStack(alignment: .leading, spacing: 2) {
-                            Text("Force PosterBoard Cache Refresh")
+                            Text("Обновлять кэш обоев")
                                 .font(.subheadline.weight(.medium))
-                            Text("Resets file protections so iOS re-indexes wallpapers immediately")
-                                .font(.caption2)
+                            Text("Обновляет защиту файлов для повторной индексации в iOS")
+                                .font(.footnote)
                                 .foregroundColor(.secondary)
                         }
                     }
@@ -88,11 +93,11 @@ struct TendiesView: View {
                 if !vm.tendieItems.isEmpty {
                     Section {
                         HStack {
-                            Text("\(vm.tendieItems.count) Wallpapers Imported")
+                            Text("В коллекции: \(vm.tendieItems.count)")
                                 .font(.caption.bold())
                                 .foregroundColor(.secondary)
                             Spacer()
-                            Button(selectedAll ? "Deselect All" : "Select All") {
+                            Button(selectedAll ? "Снять выбор" : "Выбрать все") {
                                 let target = !selectedAll
                                 for i in 0..<vm.tendieItems.count {
                                     vm.tendieItems[i].isSelected = target
@@ -109,7 +114,7 @@ struct TendiesView: View {
                             }
                         }
                     } header: {
-                        Text("Wallpapers Gallery")
+                        Text("Моя коллекция")
                     }
                 } else {
                     Section {
@@ -117,10 +122,10 @@ struct TendiesView: View {
                             Image(systemName: "photo.stack")
                                 .font(.system(size: 32))
                                 .foregroundColor(.secondary)
-                            Text("No .tendies wallpapers loaded yet")
+                            Text("Коллекция пока пуста")
                                 .font(.subheadline)
                                 .foregroundColor(.secondary)
-                            Text("Tap 'Choose .tendies from Files' or copy wallpapers into On My iPhone › FrameKit.")
+                            Text("Импортируй .tendies или скопируй файл в «На iPhone → FrameKit».")
                                 .font(.caption)
                                 .foregroundColor(.secondary)
                                 .multilineTextAlignment(.center)
@@ -137,7 +142,7 @@ struct TendiesView: View {
                             HStack(spacing: 10) {
                                 ProgressView()
                                 VStack(alignment: .leading, spacing: 4) {
-                                    Text("Flashing Wallpapers…").font(.subheadline.bold())
+                                    Text("Применение обоев…").font(.subheadline.bold())
                                     ProgressView(value: vm.tendiesFlashProgress)
                                 }
                             }
@@ -151,7 +156,7 @@ struct TendiesView: View {
                                 HStack(spacing: 8) {
                                     Spacer()
                                     Image(systemName: "sparkles")
-                                    Text("Flash \(selectedCount) Wallpaper\(selectedCount == 1 ? "" : "s")")
+                                    Text("Применить обои: \(selectedCount)")
                                     Spacer()
                                 }
                                 .font(.headline)
@@ -159,7 +164,7 @@ struct TendiesView: View {
                                 .frame(height: 48)
                             }
                             .buttonStyle(.borderedProminent)
-                            .tint(.blue)
+                            .tint(FrameKitStyle.purple)
                             .disabled(selectedCount == 0)
                         }
 
@@ -171,7 +176,7 @@ struct TendiesView: View {
                             HStack(spacing: 8) {
                                 Spacer()
                                 Image(systemName: "bolt.fill")
-                                Text("Respring (NeoSpring)")
+                                Text("Перезапустить интерфейс")
                                 Spacer()
                             }
                             .font(.headline)
@@ -183,7 +188,7 @@ struct TendiesView: View {
                     }
                     .listRowInsets(EdgeInsets(top: 12, leading: 14, bottom: 12, trailing: 14))
                 } footer: {
-                    Text("Flashing will automatically trigger NeoSpring to respring the device and apply your new wallpapers.")
+                    Text("После применения NeoSpring автоматически перезапустит интерфейс iPhone.")
                 }
 
                 // Section 5: Flash Log (CompactLogView)
@@ -197,11 +202,9 @@ struct TendiesView: View {
                     }
                 }
             }
-            .safeAreaInset(edge: .bottom) {
-                Color.clear.frame(height: 60)
-            }
-            .navigationTitle("Wallpapers")
-            .navigationBarTitleDisplayMode(.inline)
+            .modifier(FrameKitFormStyle())
+            .navigationTitle("Обои")
+            .navigationBarTitleDisplayMode(.large)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button {
@@ -288,11 +291,11 @@ struct TendieRowView: View {
                         .foregroundColor(item.posterType.badgeColor)
 
                     Text("•")
-                        .font(.caption2)
+                        .font(.footnote)
                         .foregroundColor(.secondary)
 
                     Text("\(item.descriptorCount) item\(item.descriptorCount == 1 ? "" : "s")")
-                        .font(.caption2)
+                        .font(.footnote)
                         .foregroundColor(.secondary)
                 }
             }
@@ -360,7 +363,7 @@ struct TendieDetailSheet: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Done") {
+                    Button("Готово") {
                         dismiss()
                     }
                 }
