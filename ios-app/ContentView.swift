@@ -1789,7 +1789,7 @@ struct ApplyThemeSection: View {
             }
             .buttonStyle(.borderedProminent)
             .tint(FrameKitStyle.orangeFill)
-            .disabled(!vm.canFlashPassthm)
+            .disabled(vm.isImportingTheme || (vm.passcodeMode == .themeCreator ? vm.effectiveKeys.isEmpty : vm.loadedTheme == nil))
         } else {
             Button {
                 vm.requestApply(.themes)
@@ -1806,7 +1806,7 @@ struct ApplyThemeSection: View {
             }
             .buttonStyle(.borderedProminent)
             .tint(FrameKitStyle.blueFill)
-            .disabled(!vm.canFlashPassthm)
+            .disabled(vm.isImportingTheme || (vm.passcodeMode == .themeCreator ? vm.effectiveKeys.isEmpty : vm.loadedTheme == nil))
         }
     }
 }
@@ -2245,7 +2245,7 @@ struct ThemeCreatorSection: View {
             }
             .buttonStyle(.borderedProminent)
             .tint(FrameKitStyle.orangeFill)
-            .disabled(!vm.canFlashPassthm)
+            .disabled(vm.isImportingTheme || (vm.passcodeMode == .themeCreator ? vm.effectiveKeys.isEmpty : vm.loadedTheme == nil))
         } else {
             Button {
                 vm.requestApply(.themes)
@@ -2262,7 +2262,7 @@ struct ThemeCreatorSection: View {
             }
             .buttonStyle(.borderedProminent)
             .tint(FrameKitStyle.blueFill)
-            .disabled(!vm.canFlashPassthm)
+            .disabled(vm.isImportingTheme || (vm.passcodeMode == .themeCreator ? vm.effectiveKeys.isEmpty : vm.loadedTheme == nil))
         }
     }
 }
@@ -2301,7 +2301,7 @@ struct KeypadPreviewView: View {
         let gridW: CGFloat = KeypadLayout.gridWidth * scale
         let gridH: CGFloat = KeypadLayout.gridHeight * scale
 
-        let isSeamlessPoster = (vm.passcodeMode == .themeCreator && vm.sliceMode == .posterSlice && !vm.maskToCircles && vm.posterImage != nil)
+        let isSeamlessPoster = (vm.passcodeMode == .themeCreator && vm.sliceMode == .posterSlice && !vm.maskToCircles && vm.posterImage != nil && vm.editorBackground == .original && vm.editorCornerRadius == 0)
 
         ZStack {
             // Dark luxury frosted card backdrop
@@ -2368,7 +2368,7 @@ struct KeypadPreviewView: View {
                     HStack(spacing: 5) {
                         Image(systemName: "hand.draw.fill")
                             .font(.system(size: 10))
-                        Text("Drag preview to reposition")
+                        Text("Перетащи для настройки положения")
                             .font(.system(size: 11, weight: .medium))
                     }
                     .foregroundStyle(.white.opacity(0.65))

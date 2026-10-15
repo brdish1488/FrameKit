@@ -986,14 +986,14 @@ final class AppViewModel: ObservableObject {
 
     func loadPassthm(url: URL, displayName: String? = nil) {
         guard !isImportingTheme else {
-            themeImportStatus = "Another theme is still being read. Please wait."
+            themeImportStatus = "Другая тема ещё читается. Подожди."
             return
         }
         passcodeMode = .applyTheme
         themeImportError = nil
-        themeImportStatus = "Selected: \(url.lastPathComponent). Preparing local copy…"
+        themeImportStatus = "Выбрано: \(url.lastPathComponent). Подготовка локальной копии…"
         guard ["passthm", "zip"].contains(url.pathExtension.lowercased()) else {
-            themeImportError = "Select a .passthm theme or ZIP archive, not an image or wallpaper."
+            themeImportError = "Выбери тему .passthm или ZIP, а не изображение или обои."
             return
         }
         let generation = UUID()
@@ -1025,7 +1025,7 @@ final class AppViewModel: ObservableObject {
                 await MainActor.run {
                     guard let self = self, self.themeImportGeneration == generation else { return }
                     self.themeOperationStage = "Чтение изображений кнопок…"
-                    self.themeImportStatus = "Copied \(size.int64Value) bytes. Decoding button images…"
+                    self.themeImportStatus = "Файл скопирован: \(size.int64Value) байт. Чтение кнопок…"
                 }
                 guard let (keys, rawData, count) = PasscodeThemeReader.inspect(url: localURL) else {
                     throw NSError(domain: "FrameKit.ThemeImport", code: 2,
@@ -1048,14 +1048,14 @@ final class AppViewModel: ObservableObject {
                     self.themeOperationStage = "Тема прочитана · кнопок: \(keys.count)"
                     self.rememberTheme(url: localURL, name: displayName ?? url.deletingPathExtension().lastPathComponent, keys: keys)
                     FrameKitFeedback.result(true)
-                    self.themeImportStatus = "Imported \(localURL.lastPathComponent): \(keys.count) keys, \(count) image files."
+                    self.themeImportStatus = "Тема прочитана: кнопок — \(keys.count), изображений — \(count)."
                 }
             } catch {
                 try? FileManager.default.removeItem(at: directory)
                 await MainActor.run {
                     guard let self = self, self.themeImportGeneration == generation else { return }
                     self.isImportingTheme = false
-                    self.themeImportStatus = "Import stopped for \(url.lastPathComponent)."
+                    self.themeImportStatus = "Импорт \(url.lastPathComponent) остановлен."
                     self.themeImportError = error.localizedDescription
                     self.themeOperationStage = "Импорт остановлен"
                     self.themeOperationError = "Не удалось прочитать тему. Проверь, что это непустой архив .passthm с изображениями кнопок, и импортируй его заново."
@@ -1076,6 +1076,8 @@ final class AppViewModel: ObservableObject {
         isImportingTheme = false
         themeImportError = nil
         themeImportStatus = ""
+        themeOperationStage = ""
+        themeOperationError = nil
         if let directory = importedThemeDirectory {
             try? FileManager.default.removeItem(at: directory)
         }
