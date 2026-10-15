@@ -24,13 +24,7 @@ struct TendiesView: View {
     }
 
     var body: some View {
-        NavigationStack {
             Form {
-                Section {
-                    FrameKitHero(title: "Обои в движении", subtitle: "Анимация для экрана блокировки", symbol: "photo.stack.fill", accent: FrameKitStyle.purple)
-                }
-                .listRowBackground(Color.clear)
-                .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
                 // Notice Banners
                 if let err = vm.errorMessage {
                     Section {
@@ -204,17 +198,7 @@ struct TendiesView: View {
             }
             .modifier(FrameKitFormStyle())
             .navigationTitle("Обои")
-            .navigationBarTitleDisplayMode(.large)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button {
-                        showFilePicker = true
-                    } label: {
-                        Image(systemName: "plus")
-                            .font(.headline)
-                    }
-                }
-            }
+            .navigationBarTitleDisplayMode(.inline)
             .sheet(isPresented: $showFilePicker) {
                 TendiesDocumentPickerView { urls in
                     Task {
@@ -247,7 +231,7 @@ struct TendiesView: View {
                     }
                 }
             }
-        }
+        
     }
 }
 

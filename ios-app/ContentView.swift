@@ -30,7 +30,7 @@ struct CreditsSheet: View {
     @Environment(\.dismiss) private var dismiss
 
     private var version: String {
-        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.4.0"
+        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.4.1"
     }
 
     var body: some View {
@@ -411,7 +411,7 @@ struct FrameKitFormStyle: ViewModifier {
             .background(Color.black)
             .listSectionSpacing(24)
             .environment(\.defaultMinListRowHeight, 54)
-            .navigationBarTitleDisplayMode(.large)
+            .navigationBarTitleDisplayMode(.inline)
             .toolbarBackground(Color.black, for: .navigationBar)
     }
 }
@@ -489,28 +489,152 @@ struct FrameKitRouteRow: View {
     }
 }
 
-// MARK: - Root Tab View
+// MARK: - Single home navigation
+
+enum FrameKitDestination: Hashable {
+    case connection, themes, wallpapers, wallet
+}
+
+struct FrameKitFeatureCard: View {
+    let title: String
+    let subtitle: String
+    let format: String
+    let symbol: String
+    let accent: Color
+
+    var body: some View {
+        HStack(spacing: 20) {
+            VStack(alignment: .leading, spacing: 12) {
+                Text(format).font(.system(size: 14, weight: .semibold, design: .monospaced))
+                    .foregroundStyle(accent)
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(title).font(.system(size: 24, weight: .bold)).foregroundStyle(.white)
+                    Text(subtitle).font(.subheadline).foregroundStyle(.white.opacity(0.65))
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+            Spacer(minLength: 0)
+            Image(systemName: symbol)
+                .font(.system(size: 40, weight: .light))
+                .foregroundStyle(accent)
+                .frame(width: 64, height: 72)
+                .accessibilityHidden(true)
+        }
+        .padding(22)
+        .frame(maxWidth: .infinity, minHeight: 150, alignment: .leading)
+        .background {
+            RoundedRectangle(cornerRadius: 26, style: .continuous)
+                .fill(LinearGradient(colors: [accent.opacity(0.16), FrameKitStyle.surface], startPoint: .topLeading, endPoint: .bottomTrailing))
+        }
+        .overlay {
+            RoundedRectangle(cornerRadius: 26, style: .continuous).strokeBorder(accent.opacity(0.16), lineWidth: 1)
+        }
+        .contentShape(RoundedRectangle(cornerRadius: 26))
+    }
+}
+
+struct FrameKitHomeView: View {
+    @EnvironmentObject var vm: AppViewModel
+    @State private var showCredits = false
+
+    private var connectionReady: Bool { vm.wifiUp && vm.vpnUp && vm.hasPairingFile }
+    private var connectionDetail: String {
+        if !vm.hasPairingFile { return "Добавь файл сопряжения" }
+        if !vm.wifiUp { return "Подключи Wi-Fi" }
+        if !vm.vpnUp { return "Включи LocalDevVPN" }
+        return "Можно применять оформление"
+    }
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 24) {
+                NavigationLink(value: FrameKitDestination.connection) {
+                    HStack(spacing: 14) {
+                        Image(systemName: connectionReady ? "checkmark.circle.fill" : "link")
+                            .font(.system(size: 23, weight: .medium))
+                            .foregroundStyle(connectionReady ? Color.green : FrameKitStyle.blue)
+                            .frame(width: 30)
+                        VStack(alignment: .leading, spacing: 5) {
+                            Text("Подключение").font(.body.weight(.semibold)).foregroundStyle(.white)
+                            Text(connectionDetail).font(.subheadline)
+                                .foregroundStyle(connectionReady ? Color.green : Color.white.opacity(0.65))
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                        Spacer(minLength: 0)
+                        Image(systemName: "chevron.right").font(.caption.bold()).foregroundStyle(.white.opacity(0.55))
+                    }
+                    .padding(18)
+                    .frame(maxWidth: .infinity, minHeight: 82, alignment: .leading)
+                    .background(FrameKitStyle.surface, in: RoundedRectangle(cornerRadius: 22))
+                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("home.connection")
+
+                VStack(spacing: 16) {
+                    NavigationLink(value: FrameKitDestination.themes) {
+                        FrameKitFeatureCard(title: "Темы пароля", subtitle: "Свой стиль кнопок
+экрана блокировки", format: ".passthm", symbol: "circle.grid.3x3.fill", accent: FrameKitStyle.blue)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityIdentifier("home.themes")
+
+                    NavigationLink(value: FrameKitDestination.wallpapers) {
+                        FrameKitFeatureCard(title: "Обои", subtitle: "Добавь движение
+экрану блокировки", format: ".tendies", symbol: "photo.stack", accent: FrameKitStyle.purple)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityIdentifier("home.wallpapers")
+
+                    NavigationLink(value: FrameKitDestination.wallet) {
+                        FrameKitRouteRow(title: "Карты Wallet", subtitle: "Твои изображения на картах", symbol: "creditcard.fill")
+                            .padding(.horizontal, 20).padding(.vertical, 8)
+                            .background(FrameKitStyle.surface, in: RoundedRectangle(cornerRadius: 22))
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityIdentifier("home.wallet")
+                }
+            }
+            .padding(.horizontal, 20)
+            .padding(.bottom, 28)
+        }
+        .background(Color.black)
+        .navigationTitle("FrameKit")
+        .navigationBarTitleDisplayMode(.large)
+        .toolbarBackground(Color.black, for: .navigationBar)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button { showCredits = true } label: {
+                    Image(systemName: "info.circle").frame(width: 44, height: 44)
+                }.accessibilityLabel("О FrameKit")
+            }
+        }
+        .sheet(isPresented: $showCredits) { CreditsSheet() }
+        .onAppear { vm.refreshNetworkStatus(); vm.refreshPairingFile() }
+        .refreshable { vm.refreshNetworkStatus(); vm.refreshPairingFile() }
+    }
+}
 
 struct ContentView: View {
     @EnvironmentObject var vm: AppViewModel
+    @State private var path: [FrameKitDestination]
+
+    // Initial routes make the actual navigation hierarchy testable without a
+    // second navigation stack or preview-only screen implementation.
+    init(initialPath: [FrameKitDestination] = []) {
+        _path = State(initialValue: initialPath)
+    }
 
     var body: some View {
-        TabView(selection: $vm.selectedTab) {
-            PairingTab()
-                .tabItem { Label("Главная", systemImage: "antenna.radiowaves.left.and.right") }
-                .tag(AppTab.pairing)
-
-            WalletCardsTab()
-                .tabItem { Label("Карты", systemImage: "creditcard.fill") }
-                .tag(AppTab.walletCards)
-
-            PasscodeThemeTab()
-                .tabItem { Label("Темы", systemImage: "lock.circle.fill") }
-                .tag(AppTab.passcodeThemes)
-
-            TendiesView()
-                .tabItem { Label("Обои", systemImage: "photo.stack.fill") }
-                .tag(AppTab.wallpapers)
+        NavigationStack(path: $path) {
+            FrameKitHomeView()
+                .navigationDestination(for: FrameKitDestination.self) { destination in
+                    switch destination {
+                    case .connection: PairingTab()
+                    case .themes: PasscodeThemeTab()
+                    case .wallpapers: TendiesView()
+                    case .wallet: WalletCardsTab()
+                    }
+                }
         }
         .preferredColorScheme(.dark)
         .tint(FrameKitStyle.blue)
@@ -544,7 +668,6 @@ struct ContentView: View {
 struct PairingTab: View {
     @EnvironmentObject var vm: AppViewModel
     @State private var showDeleteConfirm = false
-    @State private var showCredits = false
     @State private var showFilePicker = false
     @State private var showPairingGuide = false
     @State private var showRespringConfirm = false
@@ -553,37 +676,8 @@ struct PairingTab: View {
         ProcessInfo.processInfo.operatingSystemVersion.majorVersion >= 27
     }
 
-    private var version: String {
-        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.4.0"
-    }
-
     var body: some View {
-        NavigationStack {
             Form {
-                Section {
-                    FrameKitHero(title: "Твой iPhone. Твой стиль.",
-                                 subtitle: "FrameKit \(version) · темы, обои и карты",
-                                 symbol: "viewfinder")
-                }
-                .listRowBackground(Color.clear)
-                .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
-
-                Section("Движок") {
-                    HStack(spacing: 14) {
-                        Image(systemName: "cpu").font(.title2).foregroundStyle(FrameKitStyle.blue)
-                        VStack(alignment: .leading, spacing: 5) {
-                            Text("Airlift").font(.headline)
-                            Text("На устройстве").font(.subheadline).foregroundStyle(.secondary)
-                        }
-                        Spacer()
-                        Text("ON DEVICE").font(.system(size: 11, weight: .bold, design: .monospaced))
-                            .foregroundStyle(FrameKitStyle.blue)
-                    }
-                    .padding(.vertical, 8)
-                    Text("Совместимость зависит от версии iOS. В исходном проекте заявлено: iOS 18 — 27.2 beta 2; с 27.2 beta 3 уязвимость исправлена.")
-                        .font(.subheadline).foregroundStyle(.secondary)
-                }
-
                 Section("Подключение и сопряжение") {
                     FrameKitStatusRow(title: vm.wifiUp ? "Wi-Fi подключён" : "Wi-Fi недоступен",
                                       subtitle: "Беспроводной интерфейс", symbol: "wifi", active: vm.wifiUp)
@@ -668,18 +762,6 @@ struct PairingTab: View {
                     }
                 }
 
-                Section("Персонализация") {
-                    Button { vm.selectedTab = .passcodeThemes } label: {
-                        FrameKitRouteRow(title: "Экран код-пароля", subtitle: "Темы .passthm и свои изображения", symbol: "circle.grid.3x3.fill")
-                    }.buttonStyle(.plain)
-                    Button { vm.selectedTab = .wallpapers } label: {
-                        FrameKitRouteRow(title: "Анимированные обои", subtitle: "Импорт и применение .tendies", symbol: "photo.stack.fill", accent: FrameKitStyle.purple)
-                    }.buttonStyle(.plain)
-                    Button { vm.selectedTab = .walletCards } label: {
-                        FrameKitRouteRow(title: "Карты Wallet", subtitle: "Собственное оформление карт", symbol: "creditcard.fill")
-                    }.buttonStyle(.plain)
-                }
-
                 Section("Действия") {
                     Button { showRespringConfirm = true } label: {
                         Label("Перезапустить интерфейс", systemImage: "arrow.clockwise.circle.fill")
@@ -690,6 +772,22 @@ struct PairingTab: View {
                             .frame(minHeight: 44)
                     }
                 }
+                Section("Движок") {
+                    HStack(spacing: 14) {
+                        Image(systemName: "cpu").font(.title2).foregroundStyle(FrameKitStyle.blue)
+                        VStack(alignment: .leading, spacing: 5) {
+                            Text("Airlift").font(.headline)
+                            Text("На устройстве").font(.subheadline).foregroundStyle(.secondary)
+                        }
+                        Spacer()
+                        Text("ON DEVICE").font(.system(size: 11, weight: .bold, design: .monospaced))
+                            .foregroundStyle(FrameKitStyle.blue)
+                    }
+                    .padding(.vertical, 8)
+                    Text("Совместимость зависит от версии iOS. В исходном проекте заявлено: iOS 18 — 27.2 beta 2; с 27.2 beta 3 уязвимость исправлена.")
+                        .font(.subheadline).foregroundStyle(.secondary)
+                }
+
                 if !vm.log.isEmpty {
                     Section("Диагностика") {
                         CompactLogView(title: "Журнал подключения", lines: vm.log, onClear: { vm.log.removeAll() })
@@ -697,13 +795,7 @@ struct PairingTab: View {
                 }
             }
             .modifier(FrameKitFormStyle())
-            .navigationTitle("FrameKit")
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button { showCredits = true } label: { Image(systemName: "info.circle") }
-                        .accessibilityLabel("О FrameKit")
-                }
-            }
+            .navigationTitle("Подключение")
             .confirmationDialog("Удалить сопряжение?", isPresented: $showDeleteConfirm, titleVisibility: .visible) {
                 Button("Удалить", role: .destructive) { vm.deletePairingFile() }
                 Button("Отмена", role: .cancel) {}
@@ -712,7 +804,6 @@ struct PairingTab: View {
                 Button("Перезапустить", role: .destructive) { vm.respringDevice() }
                 Button("Отмена", role: .cancel) {}
             } message: { Text("NeoSpring временно прервёт работу интерфейса. Сохрани открытые данные.") }
-            .sheet(isPresented: $showCredits) { CreditsSheet() }
             .sheet(isPresented: $showFilePicker) {
                 DocumentPickerView(allowedContentTypes: [
                     UTType(filenameExtension: "mobiledevicepairing") ?? .data,
@@ -738,7 +829,7 @@ struct PairingTab: View {
                     }
                 }
             }
-        }
+        
     }
 }
 
@@ -1049,7 +1140,6 @@ struct WalletCardsTab: View {
     @State private var showSourceDialog: Bool = false
     @State private var isPhotosPickerPresented: Bool = false
     @State private var isDocumentPickerPresented: Bool = false
-    @State private var showCredits = false
     private struct CropRequest: Identifiable {
         let id = UUID()
         let image: UIImage
@@ -1062,11 +1152,8 @@ struct WalletCardsTab: View {
     @State private var cropAccepted = false
 
     var body: some View {
-        NavigationStack {
             ScrollView {
                 VStack(spacing: 24) {
-                    FrameKitHero(title: "Карты с характером", subtitle: "Твои изображения для Wallet", symbol: "creditcard.fill")
-                        .padding(.horizontal, 24)
                     scannerBanner
 
                     if vm.cards.isEmpty {
@@ -1083,23 +1170,13 @@ struct WalletCardsTab: View {
             .modifier(FrameKitFormStyle())
             .background(Color.black)
             .navigationTitle("Карты Wallet")
-            .navigationBarTitleDisplayMode(.large)
+            .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Button {
-                        vm.toggleCardScanning()
-                    } label: {
-                        HStack(spacing: 4) {
-                            Image(systemName: vm.isScanningCards ? "stop.circle.fill" : "wave.3.left.circle")
-                            Text(vm.isScanningCards ? "Стоп" : "Сканировать")
-                        }
-                        .font(.subheadline.bold())
-                        .foregroundStyle(vm.isScanningCards ? .red : .blue)
-                    }
-                    .transaction { $0.animation = nil }
-                }
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Menu {
+                        Button { vm.toggleCardScanning() } label: {
+                            Label(vm.isScanningCards ? "Остановить поиск" : "Сканировать карты", systemImage: vm.isScanningCards ? "stop.circle" : "wave.3.left.circle")
+                        }
                         Button {
                             showAddSheet = true
                         } label: {
@@ -1137,13 +1214,6 @@ struct WalletCardsTab: View {
                                 Label("Удалить все карты", systemImage: "trash")
                             }
 
-                            Divider()
-
-                            Button {
-                                showCredits = true
-                            } label: {
-                                Label("О FrameKit", systemImage: "info.circle")
-                            }
                         }
                     } label: {
                         Image(systemName: "ellipsis.circle")
@@ -1151,12 +1221,12 @@ struct WalletCardsTab: View {
                     }
                 }
 
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    flashButton
-                }
             }
-            .sheet(isPresented: $showCredits) {
-                CreditsSheet()
+            .safeAreaInset(edge: .bottom) {
+                if !vm.cards.isEmpty {
+                    flashButton.padding(.horizontal, 20).padding(.vertical, 12)
+                        .background(Color.black)
+                }
             }
             .sheet(isPresented: $showAddSheet) {
                 AddCardSheet(hashText: $newHashText) {
@@ -1217,7 +1287,7 @@ struct WalletCardsTab: View {
             } message: {
                 Text("Choose another image or try downloading the photo to your iPhone first.")
             }
-        }
+        
     }
 
     private func assignImage(_ image: UIImage, to target: ActiveCardPicker) {
@@ -1336,21 +1406,21 @@ struct WalletCardsTab: View {
                         .progressViewStyle(CircularProgressViewStyle(tint: .white))
                         .scaleEffect(0.75)
                     Text("Применение…")
-                        .font(.system(size: 13, weight: .semibold))
+                        .font(.headline)
                 } else if case .done(let ok) = vm.cardFlashPhase, !ok {
                     Image(systemName: "arrow.clockwise")
                         .font(.system(size: 12, weight: .semibold))
                     Text("Повторить")
-                        .font(.system(size: 13, weight: .semibold))
+                        .font(.headline)
                 } else {
                     Image(systemName: "bolt.fill")
                         .font(.system(size: 12, weight: .semibold))
                     Text("Применить")
-                        .font(.system(size: 13, weight: .semibold))
+                        .font(.headline)
                 }
             }
             .padding(.horizontal, 4)
-            .frame(minHeight: 28)
+            .frame(maxWidth: .infinity, minHeight: 48)
         }
         .buttonStyle(.borderedProminent)
         .tint({
@@ -1377,7 +1447,7 @@ struct WalletCardsTab: View {
                     Text("1.")
                         .bold()
                         .foregroundStyle(.blue)
-                    Text("Нажми **Сканировать** вверху экрана.")
+                    Text("Нажми **Поиск**, чтобы найти карты Wallet.")
                 }
                 HStack(alignment: .top, spacing: 10) {
                     Text("2.")
@@ -1485,18 +1555,10 @@ struct AddCardSheet: View {
 
 struct PasscodeThemeTab: View {
     @EnvironmentObject var vm: AppViewModel
-    @State private var showCredits = false
     @State private var showThemeFileImporter = false
 
     var body: some View {
-        NavigationStack {
             Form {
-                Section {
-                    FrameKitHero(title: "Экран код-пароля", subtitle: "Импортируй тему или создай свою", symbol: "circle.grid.3x3.fill")
-                }
-                .listRowBackground(Color.clear)
-                .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
-
                 // Mode picker
                 Section {
                     Picker("Режим", selection: $vm.passcodeMode) {
@@ -1517,6 +1579,7 @@ struct PasscodeThemeTab: View {
                     ThemeCreatorSection()
                 }
 
+                if vm.isImportingTheme || !vm.themeImportStatus.isEmpty || vm.themeImportError != nil || vm.loadedTheme != nil {
                 Section("Состояние импорта") {
                     if vm.isImportingTheme {
                         ProgressView("Чтение темы…")
@@ -1539,6 +1602,7 @@ struct PasscodeThemeTab: View {
                             .foregroundStyle(.green)
                     }
                 }
+                }
 
                 // Flash log
                 if !vm.passthmFlashLog.isEmpty {
@@ -1553,19 +1617,6 @@ struct PasscodeThemeTab: View {
             }
             .modifier(FrameKitFormStyle())
             .navigationTitle("Темы пароля")
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button {
-                        showCredits = true
-                    } label: {
-                        Image(systemName: "info.circle")
-                            .foregroundStyle(.blue)
-                    }
-                }
-            }
-            .sheet(isPresented: $showCredits) {
-                CreditsSheet()
-            }
             .sheet(isPresented: $showThemeFileImporter) {
                 // Exactly the working wallpaper picker: same UIKit controller,
                 // asCopy setting, selection mode, content types and delegate.
@@ -1574,7 +1625,7 @@ struct PasscodeThemeTab: View {
                 }
             }
             .onAppear { vm.scanDocumentsDirectory() }
-        }
+        
     }
 }
 
