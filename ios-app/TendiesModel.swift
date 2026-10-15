@@ -1,6 +1,6 @@
 //
 //  TendiesModel.swift
-//  AirCard-iOS
+//  FrameKit
 //
 //  Models and data structures for PosterBoard .tendies wallpapers.
 //

@@ -203,7 +203,7 @@ struct DonateView: View {
                 )
             }
 
-            Text("Thank you so much for supporting AirCard-iOS development! ❤️")
+            Text("Thank you so much for supporting the original AirCard project! ❤️")
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
@@ -229,7 +229,7 @@ struct SupportPopupSheet: View {
                             .font(.system(size: 56))
                             .foregroundStyle(.pink)
 
-                        Text("Welcome to AirCard-iOS!")
+                        Text("Welcome to FrameKit!")
                             .font(.title2.bold())
 
                         Text("Free & Open Source • Developed by @mak5er")
@@ -244,7 +244,7 @@ struct SupportPopupSheet: View {
                         Button {
                             dismiss()
                         } label: {
-                            Text("Continue to AirCard")
+                            Text("Continue to FrameKit")
                                 .font(.headline)
                                 .frame(maxWidth: .infinity)
                                 .padding(.vertical, 14)
@@ -343,8 +343,17 @@ struct CreditsSheet: View {
                     .font(.system(size: 64))
                     .foregroundStyle(.blue)
 
-                Text("AirCard-iOS")
+                Text("FrameKit")
                     .font(.title2.bold())
+
+                Text("FrameKit is a renamed build of AirCard-iOS by @mak5er, based on work by @merybist and the upstream contributors. System functionality is unchanged.")
+                    .font(.caption)
+                    .multilineTextAlignment(.center)
+                Link("Original source: Mak5er/AirCard-iOS", destination: URL(string: "https://github.com/Mak5er/AirCard-iOS")!)
+                    .font(.caption)
+                Text("MIT License\n\nCopyright (c) 2026 Johnny Franks\n\nPermission is hereby granted, free of charge, to any person obtaining a copy\nof this software and associated documentation files (the \"Software\"), to deal\nin the Software without restriction, including without limitation the rights\nto use, copy, modify, merge, publish, distribute, sublicense, and/or sell\ncopies of the Software, and to permit persons to whom the Software is\nfurnished to do so, subject to the following conditions:\n\nThe above copyright notice and this permission notice shall be included in all\ncopies or substantial portions of the Software.\n\nTHE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR\nIMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,\nFITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE\nAUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER\nLIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,\nOUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE\nSOFTWARE.\n")
+                    .font(.system(size: 10))
+                    .foregroundStyle(.secondary)
 
                 Text("Apple Wallet Skins & Passcode Themes (iOS 18.0 – 27.2 b2)")
                     .font(.caption)
@@ -550,7 +559,7 @@ struct PairingGuideSheet: View {
                     VStack(alignment: .leading, spacing: 6) {
                         Text("Where to find your pairing file")
                             .font(.title2.bold())
-                        Text("AirCard-iOS can import pairing files exported by SideStore, LiveContainer, iLoader, or your computer.")
+                        Text("FrameKit can import pairing files exported by SideStore, LiveContainer, iLoader, or your computer.")
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
                     }
@@ -654,14 +663,14 @@ struct PairingGuideSheet: View {
                             .font(.footnote)
                             .foregroundStyle(.secondary)
 
-                        Text("Files app › On My iPhone › AirCard-iOS")
+                        Text("Files app › On My iPhone › FrameKit")
                             .font(.caption.monospaced())
                             .padding(8)
                             .frame(maxWidth: .infinity, alignment: .leading)
                             .background(Color(uiColor: .systemBackground))
                             .clipShape(RoundedRectangle(cornerRadius: 8))
 
-                        Text("It will immediately appear under 'Discovered in Documents' in AirCard-iOS.")
+                        Text("It will immediately appear under 'Discovered in Documents' in FrameKit.")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
@@ -918,7 +927,7 @@ struct PairingTab: View {
                             Image(systemName: "creditcard.circle.fill")
                                 .font(.title2)
                                 .foregroundStyle(.blue)
-                            Text("AirCard-iOS")
+                            Text("FrameKit")
                                 .font(.title2.bold())
                             Spacer()
                             Text("iOS \(ProcessInfo.processInfo.operatingSystemVersion.majorVersion) · v1.3.2")
@@ -1110,7 +1119,7 @@ struct PairingTab: View {
                                             .tint(.orange)
                                         }
 
-                                        Text("Settings › Privacy & Security › Developer Mode › Pair with AirCard-iOS")
+                                        Text("Settings › Privacy & Security › Developer Mode › Pair with FrameKit")
                                             .font(.footnote.weight(.semibold))
                                             .foregroundStyle(.primary)
 
@@ -1195,7 +1204,7 @@ struct PairingTab: View {
             .safeAreaInset(edge: .bottom) {
                 Color.clear.frame(height: 60)
             }
-            .navigationTitle("AirCard-iOS")
+            .navigationTitle("FrameKit")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
@@ -1280,7 +1289,7 @@ struct VPNStatusRow: View {
                         .font(.caption.bold())
                     ForEach([
                         "1. Open LocalDevVPN app and tap Connect.",
-                        "2. Return to AirCard-iOS — status indicator turns green."
+                        "2. Return to FrameKit — status indicator turns green."
                     ], id: \.self) { step in
                         Text(step)
                             .font(.caption)
@@ -2054,7 +2063,7 @@ struct ApplyThemeSection: View {
     var body: some View {
         // Themes dropped directly into Documents folder
         if !vm.documentsThemes.isEmpty {
-            Section("Themes in App Folder (On My iPhone › AirCard-iOS)") {
+            Section("Themes in App Folder (On My iPhone › FrameKit)") {
                 ForEach(vm.documentsThemes, id: \.self) { file in
                     HStack {
                         Image(systemName: "paintpalette.fill")

@@ -1,6 +1,6 @@
 //
 //  TendiesEngine.swift
-//  AirCard-iOS
+//  FrameKit
 //
 //  Engine for parsing, extracting, and flashing PosterBoard .tendies wallpapers.
 //

@@ -1,6 +1,6 @@
 //
 //  RespringHelper.swift
-//  AirCard-iOS
+//  FrameKit
 //
 //  Respring & PosterBoard refresh implementation using NeoSpring (by @neonmodder123 & @skadz108).
 //

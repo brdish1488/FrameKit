@@ -1,6 +1,6 @@
 //
 //  TendiesView.swift
-//  AirCard-iOS
+//  FrameKit
 //
 //  Dedicated UI for importing, previewing, and flashing PosterBoard .tendies wallpapers.
 //  Unified Form design matching Passcode Theme and Wallet Cards tabs.
@@ -120,7 +120,7 @@ struct TendiesView: View {
                             Text("No .tendies wallpapers loaded yet")
                                 .font(.subheadline)
                                 .foregroundColor(.secondary)
-                            Text("Tap 'Choose .tendies from Files' or copy wallpapers into On My iPhone › AirCard-iOS.")
+                            Text("Tap 'Choose .tendies from Files' or copy wallpapers into On My iPhone › FrameKit.")
                                 .font(.caption)
                                 .foregroundColor(.secondary)
                                 .multilineTextAlignment(.center)
