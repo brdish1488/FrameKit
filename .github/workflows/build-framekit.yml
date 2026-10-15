@@ -28,7 +28,7 @@ jobs:
 
         assert p[''CFBundleDisplayName'']==''FrameKit''
 
-        assert ''FrameKit is a renamed build of AirCard-iOS'' in Path(''ios-app/ContentView.swift'').read_text()
+        assert ''FrameKit is a fork of AirCard-iOS'' in Path(''ios-app/ContentView.swift'').read_text()
 
         assert Path(''LICENSE'').is_file()
 
@@ -40,9 +40,10 @@ jobs:
     - name: Compile FrameKit for iPhone (no Apple account required)
       run: "set -euo pipefail\nmkdir -p build\nxcodebuild -version\nxcodebuild -project AirCard-iOS.xcodeproj -scheme AirCard-iOS\
         \ \\\n  -configuration Release -derivedDataPath build/DerivedData \\\n  -destination 'generic/platform=iOS' clean\
-        \ build \\\n  PRODUCT_NAME=FrameKit PRODUCT_MODULE_NAME=AirCard_iOS \\\n  PRODUCT_BUNDLE_IDENTIFIER=com.brdish.framekit\
-        \ \\\n  CODE_SIGN_IDENTITY=\"\" CODE_SIGNING_REQUIRED=NO \\\n  CODE_SIGN_ENTITLEMENTS=\"\" CODE_SIGNING_ALLOWED=NO\
-        \ \\\n  > build/xcodebuild.log 2>&1 || { tail -n 180 build/xcodebuild.log; exit 1; }\ntail -n 12 build/xcodebuild.log\n"
+        \ build \\\n  PRODUCT_NAME=FrameKit PRODUCT_MODULE_NAME=AirCard_iOS MARKETING_VERSION=1.3.3 CURRENT_PROJECT_VERSION=2\
+        \ \\\n  PRODUCT_BUNDLE_IDENTIFIER=com.brdish.framekit \\\n  CODE_SIGN_IDENTITY=\"\" CODE_SIGNING_REQUIRED=NO \\\n\
+        \  CODE_SIGN_ENTITLEMENTS=\"\" CODE_SIGNING_ALLOWED=NO \\\n  > build/xcodebuild.log 2>&1 || { tail -n 180 build/xcodebuild.log;\
+        \ exit 1; }\ntail -n 12 build/xcodebuild.log\n"
     - name: Package and verify IPA
       run: 'set -euo pipefail
 
