@@ -326,10 +326,15 @@ final class FrameKitDesignSnapshotTests: XCTestCase {
 
         if let scroll = verticalScroll(in: host.view) {
             let originalOffset = scroll.contentOffset
-            let bottom = max(-scroll.adjustedContentInset.top,
-                             scroll.contentSize.height - scroll.bounds.height + scroll.adjustedContentInset.bottom)
-            scroll.setContentOffset(CGPoint(x: 0, y: bottom), animated: false)
-            try await Task.sleep(nanoseconds: 400_000_000)
+            // Forms lazily estimate offscreen rows; repeat after layout to reach
+            // the real bottom, including the final action/diagnostic sections.
+            for _ in 0..<4 {
+                scroll.layoutIfNeeded()
+                let bottom = max(-scroll.adjustedContentInset.top,
+                                 scroll.contentSize.height - scroll.bounds.height + scroll.adjustedContentInset.bottom)
+                scroll.setContentOffset(CGPoint(x: 0, y: bottom), animated: false)
+                try await Task.sleep(nanoseconds: 250_000_000)
+            }
             let lower = UIGraphicsImageRenderer(size: window.bounds.size, format: format).image { _ in
                 window.drawHierarchy(in: window.bounds, afterScreenUpdates: true)
             }
@@ -346,7 +351,7 @@ final class FrameKitDesignSnapshotTests: XCTestCase {
         guard !view.isHidden, view.alpha > 0.01 else { return nil }
         if let scroll = view as? UIScrollView,
            scroll.bounds.height > 150,
-           scroll.contentSize.height > scroll.bounds.height + 100 { return scroll }
+           scroll.contentSize.height + scroll.adjustedContentInset.top + scroll.adjustedContentInset.bottom > scroll.bounds.height + 8 { return scroll }
         return view.subviews.lazy.compactMap { self.verticalScroll(in: $0) }.first
     }
 }
