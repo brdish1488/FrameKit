@@ -54,6 +54,7 @@ public struct TendieItem: Identifiable, Codable, Equatable {
     public var unsafeContainer: Bool
     public var descriptorCount: Int
     public var posterType: TendiePosterType
+    public var previewVideoFileName: String?
     public var previewImageData: Data?
     public var dateImported: Date
     public var isSelected: Bool
@@ -68,6 +69,7 @@ public struct TendieItem: Identifiable, Codable, Equatable {
         descriptorCount: Int = 1,
         posterType: TendiePosterType = .collections,
         previewImageData: Data? = nil,
+        previewVideoFileName: String? = nil,
         dateImported: Date = Date(),
         isSelected: Bool = true
     ) {
@@ -79,6 +81,7 @@ public struct TendieItem: Identifiable, Codable, Equatable {
         self.unsafeContainer = unsafeContainer
         self.descriptorCount = descriptorCount
         self.posterType = posterType
+        self.previewVideoFileName = previewVideoFileName
         self.previewImageData = previewImageData
         self.dateImported = dateImported
         self.isSelected = isSelected

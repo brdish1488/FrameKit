@@ -119,7 +119,23 @@ final class AppViewModel: ObservableObject {
         "savedCards"
     ]
 
-    init() {
+    let themeLibraryStorage: ThemeLibraryStorage
+    @Published var themeLibrary: [SavedTheme] = []
+    @Published var libraryError: String?
+    @Published var isSavingTheme = false
+    @Published var requestedApply: FrameKitApplyTarget?
+    @Published var editorBackground: EditorBackground = .original
+    @Published var editorCornerRadius: Double = 0
+    @Published var themeOperationStage = ""
+    @Published var themeOperationError: String?
+    @Published var wallpaperOperationStage = ""
+    @Published var wallpaperOperationError: String?
+    @Published var isImportingWallpapers = false
+    private var decoratedCache: [String: UIImage] = [:]
+    private var decoratedSignature = ""
+
+    init(libraryDirectory: URL? = nil) {
+        themeLibraryStorage = ThemeLibraryStorage(directory: libraryDirectory)
         Self.shared = self
         refreshPairingFile()
         loadSavedCards()
@@ -127,6 +143,7 @@ final class AppViewModel: ObservableObject {
         scanDocumentsDirectory()
         posterBoardContainer = UserDefaults.standard.string(forKey: "aircard.posterboard_container") ?? ""
         loadSavedTendies()
+        Task { await reloadLibrary() }
 
         // Hook Rust log output into our log array.
         AppViewModel.sharedLogSink = { [weak self] line in
@@ -886,7 +903,14 @@ final class AppViewModel: ObservableObject {
     // MARK: - Poster Slice
 
     var effectiveKeys: [String: UIImage] {
-        sliceMode == .posterSlice ? slicedKeys : customKeys
+        let originals = sliceMode == .posterSlice ? slicedKeys : customKeys
+        guard editorBackground != .original || editorCornerRadius > 0 else { return originals }
+        let signature = originals.keys.sorted().map { "\($0):\(ObjectIdentifier(originals[$0]!))" }.joined() + editorBackground.rawValue + String(editorCornerRadius)
+        if signature != decoratedSignature {
+            decoratedCache = originals.mapValues { ThemeArtwork.decorate($0, background: editorBackground, radius: editorCornerRadius) }
+            decoratedSignature = signature
+        }
+        return decoratedCache
     }
 
     func setPosterImage(_ img: UIImage) {
@@ -960,7 +984,7 @@ final class AppViewModel: ObservableObject {
         loadPassthm(url: url)
     }
 
-    func loadPassthm(url: URL) {
+    func loadPassthm(url: URL, displayName: String? = nil) {
         guard !isImportingTheme else {
             themeImportStatus = "Another theme is still being read. Please wait."
             return
@@ -975,6 +999,8 @@ final class AppViewModel: ObservableObject {
         let generation = UUID()
         themeImportGeneration = generation
         isImportingTheme = true
+        themeOperationStage = "Копирование файла…"
+        themeOperationError = nil
         let directory = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0]
             .appendingPathComponent("framekit_theme_\(UUID().uuidString)", isDirectory: true)
         let localURL = directory.appendingPathComponent(url.lastPathComponent)
@@ -998,6 +1024,7 @@ final class AppViewModel: ObservableObject {
                 }
                 await MainActor.run {
                     guard let self = self, self.themeImportGeneration == generation else { return }
+                    self.themeOperationStage = "Чтение изображений кнопок…"
                     self.themeImportStatus = "Copied \(size.int64Value) bytes. Decoding button images…"
                 }
                 guard let (keys, rawData, count) = PasscodeThemeReader.inspect(url: localURL) else {
@@ -1014,10 +1041,13 @@ final class AppViewModel: ObservableObject {
                     }
                     self.importedThemeDirectory = directory
                     self.loadedTheme = PasscodeThemeInfo(
-                        name: localURL.deletingPathExtension().lastPathComponent,
+                        name: displayName ?? localURL.deletingPathExtension().lastPathComponent,
                         filePath: localURL.path, fileCount: count,
                         keysPreview: keys, rawKeyData: rawData)
                     self.isImportingTheme = false
+                    self.themeOperationStage = "Тема прочитана · кнопок: \(keys.count)"
+                    self.rememberTheme(url: localURL, name: displayName ?? url.deletingPathExtension().lastPathComponent, keys: keys)
+                    FrameKitFeedback.result(true)
                     self.themeImportStatus = "Imported \(localURL.lastPathComponent): \(keys.count) keys, \(count) image files."
                 }
             } catch {
@@ -1027,6 +1057,9 @@ final class AppViewModel: ObservableObject {
                     self.isImportingTheme = false
                     self.themeImportStatus = "Import stopped for \(url.lastPathComponent)."
                     self.themeImportError = error.localizedDescription
+                    self.themeOperationStage = "Импорт остановлен"
+                    self.themeOperationError = "Не удалось прочитать тему. Проверь, что это непустой архив .passthm с изображениями кнопок, и импортируй его заново."
+                    FrameKitFeedback.result(false)
                 }
             }
         }
@@ -1087,6 +1120,8 @@ final class AppViewModel: ObservableObject {
             return
         }
 
+        themeOperationStage = "Подготовка изображений…"
+        themeOperationError = nil
         passthmFlashPhase    = .running
         passthmFlashProgress = 0
         passthmFlashLog.removeAll()
@@ -1182,6 +1217,7 @@ final class AppViewModel: ObservableObject {
 
             await MainActor.run {
                 self.passthmFlashLog.append("⚡ Staged theme assets (\(targetVer) · \(langs.joined(separator: ", ").uppercased()) · \(targetBold.code)). Injecting into iOS caches…")
+                self.themeOperationStage = "Запись оформления на устройство…"
                 self.passthmFlashProgress = 0.2
             }
 
@@ -1252,11 +1288,16 @@ final class AppViewModel: ObservableObject {
             await MainActor.run {
                 if allOk {
                     self.passthmFlashProgress = 1.0
+                    self.themeOperationStage = "Оформление записано"
+                    FrameKitFeedback.result(true)
                     self.passthmFlashPhase = .done(ok: true)
                     self.passthmFlashLog.append("🎉 Passcode theme applied! Lock your iPhone to see it.")
                     self.successAlertMessage = "Passcode theme successfully applied!\n\nLock your iPhone (or restart) to see your new passcode keypad."
                     self.showSuccessAlert = true
                 } else {
+                    self.themeOperationStage = "Запись завершилась ошибкой"
+                    self.themeOperationError = "Не все файлы записаны. Проверь VPN, сопряжение и совместимость iOS. Подробности — в журнале ниже."
+                    FrameKitFeedback.result(false)
                     self.passthmFlashPhase = .done(ok: false)
                     self.passthmFlashLog.append("❌ One or more theme injections failed.")
                 }
@@ -1278,7 +1319,7 @@ final class AppViewModel: ObservableObject {
                 bold: passcodeBoldTarget
             )
             let tempURL = FileManager.default.temporaryDirectory
-                .appendingPathComponent("AirCard_Custom_\(Int(Date().timeIntervalSince1970)).passthm")
+                .appendingPathComponent("FrameKit_Custom_\(Int(Date().timeIntervalSince1970)).passthm")
             try zipData.write(to: tempURL)
             self.exportedThemeURL = tempURL
             self.showShareSheet = true
@@ -1328,13 +1369,20 @@ final class AppViewModel: ObservableObject {
     }
 
     func importTendieFiles(urls: [URL]) async {
-        guard !urls.isEmpty else { return }
+        guard !urls.isEmpty, !isImportingWallpapers else { return }
+        isImportingWallpapers = true
+        wallpaperOperationError = nil
+        defer { isImportingWallpapers = false }
         var importedCount = 0
         var lastImportedName = ""
         for url in urls {
             do {
+                wallpaperOperationStage = "Чтение архива: \(url.lastPathComponent)"
                 let item = try await TendiesEngine.shared.importTendie(from: url)
                 await MainActor.run {
+                    for old in self.tendieItems where old.fileName == item.fileName {
+                        if let preview = old.previewVideoURL { try? FileManager.default.removeItem(at: preview) }
+                    }
                     self.tendieItems.removeAll(where: { $0.fileName == item.fileName })
                     self.tendieItems.append(item)
                     self.saveTendieItems()
@@ -1343,13 +1391,18 @@ final class AppViewModel: ObservableObject {
                 }
             } catch {
                 await MainActor.run {
-                    self.errorMessage = "Failed to import \(url.lastPathComponent): \(error.localizedDescription)"
+                    self.errorMessage = "Не удалось импортировать \(url.lastPathComponent): \(error.localizedDescription)"
+                    self.wallpaperOperationError = "Не удалось прочитать архив .tendies. Проверь файл и повтори импорт."
+                    FrameKitFeedback.result(false)
                 }
             }
         }
+        wallpaperOperationStage = "Импортировано: \(importedCount) из \(urls.count)"
+        if importedCount > 0 { FrameKitFeedback.result(true) }
     }
 
     func deleteTendie(item: TendieItem) {
+        if let preview = item.previewVideoURL { try? FileManager.default.removeItem(at: preview) }
         try? FileManager.default.removeItem(at: item.fileURL)
         tendieItems.removeAll(where: { $0.id == item.id })
         saveTendieItems()
@@ -1399,6 +1452,11 @@ final class AppViewModel: ObservableObject {
             return
         }
 
+        tendiesFlashPhase = .running
+        tendiesFlashProgress = 0
+        tendiesFlashLog = []
+        wallpaperOperationError = nil
+        wallpaperOperationStage = "Поиск контейнера PosterBoard…"
         var container = posterBoardContainer.trimmingCharacters(in: .whitespacesAndNewlines)
         if container.isEmpty {
             do {
@@ -1406,6 +1464,10 @@ final class AppViewModel: ObservableObject {
                 self.posterBoardContainer = container
                 UserDefaults.standard.set(container, forKey: "aircard.posterboard_container")
             } catch {
+                tendiesFlashPhase = .done(ok: false)
+                wallpaperOperationStage = "Контейнер не найден"
+                wallpaperOperationError = "Проверь VPN и сопряжение, разблокируй iPhone и попробуй снова."
+                FrameKitFeedback.result(false)
                 errorMessage = "PosterBoard container could not be found automatically. Ensure LocalDevVPN is connected and iPhone is unlocked."
                 return
             }
@@ -1414,6 +1476,7 @@ final class AppViewModel: ObservableObject {
         tendiesFlashPhase = .running
         tendiesFlashProgress = 0
         tendiesFlashLog = []
+        wallpaperOperationStage = "Подготовка и запись обоев…"
 
         do {
             try await TendiesEngine.shared.flashTendies(
@@ -1432,6 +1495,8 @@ final class AppViewModel: ObservableObject {
                     }
                 }
             )
+            wallpaperOperationStage = "Обои записаны · перезапуск интерфейса"
+            FrameKitFeedback.result(true)
             tendiesFlashPhase = .done(ok: true)
             tendiesFlashProgress = 1.0
             tendiesFlashLog.append("🎉 Wallpapers applied successfully!")
@@ -1442,6 +1507,9 @@ final class AppViewModel: ObservableObject {
                 RespringHelper.triggerNeoSpring()
             }
         } catch {
+            wallpaperOperationStage = "Применение остановлено"
+            wallpaperOperationError = "Не удалось записать обои. Проверь VPN, сопряжение и совместимость архива; подробности — в журнале."
+            FrameKitFeedback.result(false)
             tendiesFlashLog.append("❌ Error: \(error.localizedDescription)")
             tendiesFlashPhase = .done(ok: false)
         }

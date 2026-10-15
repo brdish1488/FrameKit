@@ -154,6 +154,9 @@ public final class TendiesEngine {
             }
         }
 
+        let movie = await WallpaperMoviePreview.extract(from: tempExtractDir)
+        if previewData == nil { previewData = movie.1 }
+
         return TendieItem(
             name: baseName,
             fileName: fileName,
@@ -163,6 +166,7 @@ public final class TendiesEngine {
             descriptorCount: descriptorCount,
             posterType: posterType,
             previewImageData: previewData,
+            previewVideoFileName: movie.0,
             dateImported: Date(),
             isSelected: true
         )

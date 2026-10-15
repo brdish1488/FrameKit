@@ -62,6 +62,7 @@ struct TendiesView: View {
                     }
                     .buttonStyle(.borderedProminent)
                     .tint(FrameKitStyle.purpleFill)
+                    .disabled(vm.isImportingWallpapers || vm.tendiesFlashPhase == .running)
                 } footer: {
                     if vm.posterBoardContainer.isEmpty {
                         Text("Контейнер PosterBoard определяется автоматически при применении.")
@@ -70,6 +71,11 @@ struct TendiesView: View {
                     }
                 }
 
+                if !vm.wallpaperOperationStage.isEmpty {
+                    Section("Ход операции") {
+                        OperationStatusView(stage: vm.wallpaperOperationStage, busy: vm.isImportingWallpapers || vm.tendiesFlashPhase == .running, error: vm.wallpaperOperationError)
+                    }
+                }
                 // Section 2: PosterBoard Options
                 Section {
                     Toggle(isOn: $vm.resetPBProtections) {
@@ -143,9 +149,7 @@ struct TendiesView: View {
                             .padding(.vertical, 4)
                         } else {
                             Button {
-                                Task {
-                                    await vm.flashSelectedTendies()
-                                }
+                                vm.requestApply(.wallpapers)
                             } label: {
                                 HStack(spacing: 8) {
                                     Spacer()
@@ -278,7 +282,7 @@ struct TendieRowView: View {
                         .font(.footnote)
                         .foregroundColor(.secondary)
 
-                    Text("\(item.descriptorCount) item\(item.descriptorCount == 1 ? "" : "s")")
+                    Text(item.fileSizeLabel)
                         .font(.footnote)
                         .foregroundColor(.secondary)
                 }
@@ -291,7 +295,7 @@ struct TendieRowView: View {
             } label: {
                 Image(systemName: "info.circle")
                     .foregroundColor(.blue)
-                    .frame(width: 32, height: 32)
+                    .frame(width: 44, height: 44)
                     .contentShape(Rectangle())
             }
             .buttonStyle(.borderless)
@@ -301,7 +305,7 @@ struct TendieRowView: View {
             } label: {
                 Image(systemName: "trash")
                     .foregroundColor(.red)
-                    .frame(width: 32, height: 32)
+                    .frame(width: 44, height: 44)
                     .contentShape(Rectangle())
             }
             .buttonStyle(.borderless)
@@ -319,27 +323,18 @@ struct TendieDetailSheet: View {
     var body: some View {
         NavigationStack {
             List {
-                Section {
-                    if let imgData = item.previewImageData, let uiImg = UIImage(data: imgData) {
-                        Image(uiImage: uiImg)
-                            .resizable()
-                            .aspectRatio(contentMode: .fit)
-                            .frame(maxWidth: .infinity, maxHeight: 300)
-                            .cornerRadius(12)
-                            .listRowInsets(EdgeInsets(top: 12, leading: 12, bottom: 12, trailing: 12))
-                            .listRowBackground(Color.clear)
-                    }
-                }
+                Section { WallpaperPreviewView(item: item) }
 
-                Section("Information") {
-                    detailRow(title: "Name", value: item.name)
-                    detailRow(title: "File Name", value: item.fileName)
-                    detailRow(title: "Type", value: item.posterType.rawValue)
-                    detailRow(title: "Descriptors", value: "\(item.descriptorCount)")
+                Section("Об архиве") {
+                    detailRow(title: "Размер", value: item.fileSizeLabel)
+                    detailRow(title: "Название", value: item.name)
+                    detailRow(title: "Файл", value: item.fileName)
+                    detailRow(title: "Тип", value: item.posterType.rawValue)
+                    detailRow(title: "Элементов", value: "\(item.descriptorCount)")
                     detailRow(title: "Target Extension", value: item.posterType.extensionBundleId)
-                    detailRow(title: "Format", value: item.isContainer ? "App Container" : "Descriptor Archive")
+                    detailRow(title: "Формат", value: item.isContainer ? "App Container" : "Descriptor Archive")
                     if item.unsafeContainer {
-                        detailRow(title: "Warning", value: "Contains SQLite database")
+                        detailRow(title: "Внимание", value: "Contains SQLite database")
                     }
                 }
             }

@@ -27,10 +27,11 @@ struct ShareSheet: UIViewControllerRepresentable {
 // MARK: - About FrameKit
 
 struct CreditsSheet: View {
+    @AppStorage("framekit.haptics") private var haptics = true
     @Environment(\.dismiss) private var dismiss
 
     private var version: String {
-        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.4.1"
+        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.5.0"
     }
 
     var body: some View {
@@ -55,6 +56,8 @@ struct CreditsSheet: View {
                             .multilineTextAlignment(.center)
                     }
                     .frame(maxWidth: .infinity)
+
+                    Toggle("Виброотклик", isOn: $haptics)
 
                     VStack(alignment: .leading, spacing: 12) {
                         Text("Открытый исходный код")
@@ -492,7 +495,7 @@ struct FrameKitRouteRow: View {
 // MARK: - Single home navigation
 
 enum FrameKitDestination: Hashable {
-    case connection, themes, wallpapers, wallet
+    case connection, themes, wallpapers, wallet, library
 }
 
 struct FrameKitFeatureCard: View {
@@ -567,20 +570,20 @@ struct FrameKitHomeView: View {
                     .frame(maxWidth: .infinity, minHeight: 82, alignment: .leading)
                     .background(FrameKitStyle.surface, in: RoundedRectangle(cornerRadius: 22))
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(FrameKitPressStyle())
                 .accessibilityIdentifier("home.connection")
 
                 VStack(spacing: 16) {
                     NavigationLink(value: FrameKitDestination.themes) {
                         FrameKitFeatureCard(title: "Темы пароля", subtitle: "Свой стиль кнопок экрана блокировки", format: ".passthm", symbol: "circle.grid.3x3.fill", accent: FrameKitStyle.blue)
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(FrameKitPressStyle())
                     .accessibilityIdentifier("home.themes")
 
                     NavigationLink(value: FrameKitDestination.wallpapers) {
                         FrameKitFeatureCard(title: "Обои", subtitle: "Добавь движение экрану блокировки", format: ".tendies", symbol: "photo.stack", accent: FrameKitStyle.purple)
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(FrameKitPressStyle())
                     .accessibilityIdentifier("home.wallpapers")
 
                     NavigationLink(value: FrameKitDestination.wallet) {
@@ -588,7 +591,7 @@ struct FrameKitHomeView: View {
                             .padding(.horizontal, 20).padding(.vertical, 8)
                             .background(FrameKitStyle.surface, in: RoundedRectangle(cornerRadius: 22))
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(FrameKitPressStyle())
                     .accessibilityIdentifier("home.wallet")
                 }
             }
@@ -631,11 +634,14 @@ struct ContentView: View {
                     case .themes: PasscodeThemeTab()
                     case .wallpapers: TendiesView()
                     case .wallet: WalletCardsTab()
+                    case .library: ThemeLibraryView()
                     }
                 }
         }
         .preferredColorScheme(.dark)
         .tint(FrameKitStyle.blue)
+        .onChange(of: path) { _ in FrameKitFeedback.selection() }
+        .sheet(item: $vm.requestedApply) { target in ApplyPreflightSheet(target: target).environmentObject(vm) }
         .alert("Внимание", isPresented: Binding(
             get: { vm.errorMessage != nil },
             set: { if !$0 { vm.errorMessage = nil } }
@@ -1396,7 +1402,7 @@ struct WalletCardsTab: View {
     @ViewBuilder
     private var flashButton: some View {
         Button {
-            vm.flashCards()
+            vm.requestApply(.wallet)
         } label: {
             HStack(spacing: 6) {
                 if case .running = vm.cardFlashPhase {
@@ -1557,6 +1563,11 @@ struct PasscodeThemeTab: View {
 
     var body: some View {
             Form {
+                Section {
+                    NavigationLink(value: FrameKitDestination.library) {
+                        Label("Мои темы · \(vm.themeLibrary.count)", systemImage: "square.stack")
+                    }
+                }
                 // Mode picker
                 Section {
                     Picker("Режим", selection: $vm.passcodeMode) {
@@ -1602,6 +1613,12 @@ struct PasscodeThemeTab: View {
                 }
                 }
 
+                if !vm.themeOperationStage.isEmpty || vm.themeOperationError != nil {
+                    Section("Ход операции") {
+                        OperationStatusView(stage: vm.themeOperationStage, busy: vm.isImportingTheme || vm.passthmFlashPhase == .running, error: vm.themeOperationError)
+                    }
+                }
+                if let error = vm.libraryError { Section { Text(error).font(.footnote).foregroundStyle(.orange) } }
                 // Flash log
                 if !vm.passthmFlashLog.isEmpty {
                     Section {
@@ -1758,7 +1775,7 @@ struct ApplyThemeSection: View {
             .padding(.vertical, 4)
         } else if case .done(let ok) = vm.passthmFlashPhase, !ok {
             Button {
-                vm.flashPassthm()
+                vm.requestApply(.themes)
             } label: {
                 HStack(spacing: 8) {
                     Spacer()
@@ -1775,7 +1792,7 @@ struct ApplyThemeSection: View {
             .disabled(!vm.canFlashPassthm)
         } else {
             Button {
-                vm.flashPassthm()
+                vm.requestApply(.themes)
             } label: {
                 HStack(spacing: 8) {
                     Spacer()
@@ -1885,6 +1902,7 @@ struct PasscodeTargetSection: View {
 // MARK: Theme Creator section
 
 struct ThemeCreatorSection: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @EnvironmentObject var vm: AppViewModel
     @State private var selectedDigitForPicker: String? = nil
     @State private var showKeySourceDialog: Bool = false
@@ -1912,6 +1930,8 @@ struct ThemeCreatorSection: View {
         } else {
             individualKeysSection
         }
+
+        CreatorAppearanceSection()
 
         // Preview
         Section("Интерактивное превью") {
@@ -2044,7 +2064,7 @@ struct ThemeCreatorSection: View {
                                 .foregroundColor(.secondary)
                             Spacer()
                             Button("Сбросить положение") {
-                                withAnimation(.spring()) {
+                                withAnimation(reduceMotion ? nil : .spring()) {
                                     vm.resetPosterPosition()
                                 }
                             }
@@ -2075,7 +2095,7 @@ struct ThemeCreatorSection: View {
                             Image(systemName: "hand.draw")
                                 .foregroundColor(.secondary)
                                 .font(.caption2)
-                            Text("Drag anywhere on the dialer preview to reposition")
+                            Text("Перетаскивай изображение в превью, чтобы изменить положение")
                                 .font(.caption2)
                                 .foregroundColor(.secondary)
                         }
@@ -2211,7 +2231,7 @@ struct ThemeCreatorSection: View {
             .padding(.vertical, 4)
         } else if case .done(let ok) = vm.passthmFlashPhase, !ok {
             Button {
-                vm.flashPassthm()
+                vm.requestApply(.themes)
             } label: {
                 HStack(spacing: 8) {
                     Spacer()
@@ -2228,7 +2248,7 @@ struct ThemeCreatorSection: View {
             .disabled(!vm.canFlashPassthm)
         } else {
             Button {
-                vm.flashPassthm()
+                vm.requestApply(.themes)
             } label: {
                 HStack(spacing: 8) {
                     Spacer()
