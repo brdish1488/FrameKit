@@ -67,7 +67,7 @@ struct TendiesView: View {
                         .frame(height: 48)
                     }
                     .buttonStyle(.borderedProminent)
-                    .tint(FrameKitStyle.purple)
+                    .tint(FrameKitStyle.purpleFill)
                 } footer: {
                     if vm.posterBoardContainer.isEmpty {
                         Text("Контейнер PosterBoard определяется автоматически при применении.")
@@ -164,7 +164,7 @@ struct TendiesView: View {
                                 .frame(height: 48)
                             }
                             .buttonStyle(.borderedProminent)
-                            .tint(FrameKitStyle.purple)
+                            .tint(FrameKitStyle.purpleFill)
                             .disabled(selectedCount == 0)
                         }
 
@@ -184,7 +184,7 @@ struct TendiesView: View {
                             .frame(height: 48)
                         }
                         .buttonStyle(.borderedProminent)
-                        .tint(.red)
+                        .tint(FrameKitStyle.redFill)
                     }
                     .listRowInsets(EdgeInsets(top: 12, leading: 14, bottom: 12, trailing: 14))
                 } footer: {

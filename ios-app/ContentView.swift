@@ -243,6 +243,7 @@ struct PairingGuideSheet: View {
                         .frame(height: 48)
                     }
                     .buttonStyle(.borderedProminent)
+            .tint(FrameKitStyle.blueFill)
                     .padding(.top, 4)
                 }
                 .padding()
@@ -395,6 +396,11 @@ struct DocumentPickerView: UIViewControllerRepresentable {
 enum FrameKitStyle {
     static let blue = Color(red: 0.23, green: 0.69, blue: 1.0)
     static let purple = Color(red: 0.82, green: 0.32, blue: 0.98)
+    // Filled actions use darker shades so white labels retain AA contrast.
+    static let blueFill = Color(red: 0.0, green: 0.40, blue: 0.73)
+    static let purpleFill = Color(red: 0.61, green: 0.12, blue: 0.73)
+    static let redFill = Color(red: 0.72, green: 0.13, blue: 0.13)
+    static let orangeFill = Color(red: 0.62, green: 0.30, blue: 0.02)
     static let surface = Color(red: 0.11, green: 0.11, blue: 0.12)
 }
 
@@ -567,7 +573,7 @@ struct PairingTab: View {
                         Image(systemName: "cpu").font(.title2).foregroundStyle(FrameKitStyle.blue)
                         VStack(alignment: .leading, spacing: 5) {
                             Text("Airlift").font(.headline)
-                            Text("Системный движок FrameKit").font(.subheadline).foregroundStyle(.secondary)
+                            Text("На устройстве").font(.subheadline).foregroundStyle(.secondary)
                         }
                         Spacer()
                         Text("ON DEVICE").font(.system(size: 11, weight: .bold, design: .monospaced))
@@ -575,7 +581,7 @@ struct PairingTab: View {
                     }
                     .padding(.vertical, 8)
                     Text("Совместимость зависит от версии iOS. В исходном проекте заявлено: iOS 18 — 27.2 beta 2; с 27.2 beta 3 уязвимость исправлена.")
-                        .font(.footnote).foregroundStyle(.secondary)
+                        .font(.subheadline).foregroundStyle(.secondary)
                 }
 
                 Section("Подключение и сопряжение") {
@@ -591,7 +597,7 @@ struct PairingTab: View {
                         Label(vm.hasPairingFile ? "Заменить файл сопряжения" : "Импортировать файл сопряжения", systemImage: "square.and.arrow.down")
                             .font(.body.weight(.semibold)).frame(maxWidth: .infinity, minHeight: 48)
                     }
-                    .buttonStyle(.borderedProminent).tint(FrameKitStyle.purple)
+                    .buttonStyle(.borderedProminent).tint(FrameKitStyle.purpleFill)
                     .padding(.vertical, 4)
 
                     Button { showPairingGuide = true } label: {
@@ -642,7 +648,8 @@ struct PairingTab: View {
                             Button { vm.startPairing() } label: {
                                 Label(vm.hasPairingFile ? "Создать сопряжение заново" : "Создать сопряжение", systemImage: "antenna.radiowaves.left.and.right")
                                     .font(.body.weight(.semibold)).frame(maxWidth: .infinity, minHeight: 48)
-                            }.buttonStyle(.borderedProminent).padding(.vertical, 4)
+                            }.buttonStyle(.borderedProminent)
+            .tint(FrameKitStyle.blueFill).padding(.vertical, 4)
                             if !vm.pairingStatus.isEmpty && vm.pairingStatus != "idle" {
                                 Text(vm.pairingStatus).font(.subheadline).foregroundStyle(.secondary)
                                     .textSelection(.enabled)
@@ -1259,7 +1266,7 @@ struct WalletCardsTab: View {
                         }
                         .font(.caption.bold())
                         .buttonStyle(.borderedProminent)
-                        .tint(.red)
+                        .tint(FrameKitStyle.redFill)
                         .controlSize(.small)
                     }
                 }
@@ -1348,9 +1355,9 @@ struct WalletCardsTab: View {
         .buttonStyle(.borderedProminent)
         .tint({
             if case .done(let ok) = vm.cardFlashPhase, !ok {
-                return Color.orange
+                return FrameKitStyle.orangeFill
             }
-            return Color.blue
+            return FrameKitStyle.blueFill
         }())
         .disabled(!vm.canFlashCards || vm.cardFlashPhase == .running)
         .animation(.easeInOut(duration: 0.2), value: vm.cardFlashPhase)
@@ -1399,7 +1406,8 @@ struct WalletCardsTab: View {
                     HStack(spacing: 6) {
                         Spacer()
                         Image(systemName: vm.isScanningCards ? "stop.circle.fill" : "wave.3.left.circle")
-                        Text(vm.isScanningCards ? "Стоп" : "Сканировать")
+                        Text(vm.isScanningCards ? "Стоп" : "Найти карты")
+                            .lineLimit(1).minimumScaleFactor(0.9)
                         Spacer()
                     }
                     .font(.headline)
@@ -1407,7 +1415,7 @@ struct WalletCardsTab: View {
                     .frame(height: 48)
                 }
                 .buttonStyle(.borderedProminent)
-                .tint(vm.isScanningCards ? .red : .blue)
+                .tint(vm.isScanningCards ? FrameKitStyle.redFill : FrameKitStyle.blueFill)
                 .transaction { $0.animation = nil }
 
                 Button {
@@ -1592,6 +1600,7 @@ struct ApplyThemeSection: View {
                         }
                         .font(.caption.bold())
                         .buttonStyle(.borderedProminent)
+            .tint(FrameKitStyle.blueFill)
                         .controlSize(.small)
                     }
                 }
@@ -1623,7 +1632,7 @@ struct ApplyThemeSection: View {
 
 
             Text("Выбери один .passthm и нажми «Открыть». Для просмотра темы сопряжение не требуется.")
-                .font(.footnote)
+                .font(.subheadline)
                 .foregroundStyle(.secondary)
 
         }
@@ -1713,7 +1722,7 @@ struct ApplyThemeSection: View {
                 .frame(height: 48)
             }
             .buttonStyle(.borderedProminent)
-            .tint(.orange)
+            .tint(FrameKitStyle.orangeFill)
             .disabled(!vm.canFlashPassthm)
         } else {
             Button {
@@ -1730,6 +1739,7 @@ struct ApplyThemeSection: View {
                 .frame(height: 48)
             }
             .buttonStyle(.borderedProminent)
+            .tint(FrameKitStyle.blueFill)
             .disabled(!vm.canFlashPassthm)
         }
     }
@@ -2165,7 +2175,7 @@ struct ThemeCreatorSection: View {
                 .frame(height: 48)
             }
             .buttonStyle(.borderedProminent)
-            .tint(.orange)
+            .tint(FrameKitStyle.orangeFill)
             .disabled(!vm.canFlashPassthm)
         } else {
             Button {
@@ -2182,6 +2192,7 @@ struct ThemeCreatorSection: View {
                 .frame(height: 48)
             }
             .buttonStyle(.borderedProminent)
+            .tint(FrameKitStyle.blueFill)
             .disabled(!vm.canFlashPassthm)
         }
     }
