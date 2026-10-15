@@ -40,10 +40,18 @@ jobs:
     - name: Compile FrameKit for iPhone (no Apple account required)
       run: "set -euo pipefail\nmkdir -p build\nxcodebuild -version\nxcodebuild -project AirCard-iOS.xcodeproj -scheme AirCard-iOS\
         \ \\\n  -configuration Release -derivedDataPath build/DerivedData \\\n  -destination 'generic/platform=iOS' clean\
-        \ build \\\n  PRODUCT_NAME=FrameKit PRODUCT_MODULE_NAME=AirCard_iOS MARKETING_VERSION=1.3.4 CURRENT_PROJECT_VERSION=3\
+        \ build \\\n  PRODUCT_NAME=FrameKit PRODUCT_MODULE_NAME=AirCard_iOS MARKETING_VERSION=1.3.5 CURRENT_PROJECT_VERSION=4\
         \ \\\n  PRODUCT_BUNDLE_IDENTIFIER=com.brdish.framekit \\\n  CODE_SIGN_IDENTITY=\"\" CODE_SIGNING_REQUIRED=NO \\\n\
         \  CODE_SIGN_ENTITLEMENTS=\"\" CODE_SIGNING_ALLOWED=NO \\\n  > build/xcodebuild.log 2>&1 || { tail -n 180 build/xcodebuild.log;\
         \ exit 1; }\ntail -n 12 build/xcodebuild.log\n"
+    - name: Run passcode import regression tests on iPhone simulator
+      run: "set -euo pipefail\nDEVICE=$(xcrun simctl list devices available -j | python3 -c 'import json,sys; d=json.load(sys.stdin);\
+        \ print(next(v[\"udid\"] for group in d[\"devices\"].values() for v in group if v[\"name\"].startswith(\"iPhone\"\
+        )))')\nxcrun simctl boot \"$DEVICE\" || true\nxcrun simctl bootstatus \"$DEVICE\" -b\nxcodebuild test -project AirCard-iOS.xcodeproj\
+        \ -scheme AirCard-iOS \\\n  -configuration Debug -derivedDataPath build/TestDerivedData \\\n  -destination \"platform=iOS\
+        \ Simulator,id=$DEVICE\" \\\n  -only-testing:AirCard-iOSTests/PasscodeThemeImportTests \\\n  -resultBundlePath build/ThemeImportTests.xcresult\
+        \ \\\n  CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO \\\n  > build/import-tests.log 2>&1 || { tail -n 180 build/import-tests.log;\
+        \ exit 1; }\ntail -n 35 build/import-tests.log\n"
     - name: Package and verify IPA
       run: 'set -euo pipefail
 
@@ -84,5 +92,9 @@ jobs:
       if: failure()
       with:
         name: FrameKit-build-log
-        path: build/xcodebuild.log
+        path: 'build/xcodebuild.log
+
+          build/import-tests.log
+
+          build/ThemeImportTests.xcresult'
         retention-days: 3
