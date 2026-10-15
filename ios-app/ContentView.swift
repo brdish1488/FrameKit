@@ -1373,7 +1373,7 @@ struct WalletCardsTab: View {
                     },
                     onClearImage: { vm.clearCardImage(for: card.id) },
                     onDelete: {
-                        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                        FrameKitFeedback.selection()
                         vm.deleteCard(id: card.id)
                     },
                     onRename: { newName in
@@ -1387,6 +1387,12 @@ struct WalletCardsTab: View {
                 ))
             }
 
+            if !vm.walletOperationStage.isEmpty {
+                OperationStatusView(stage: vm.walletOperationStage, busy: vm.cardFlashPhase == .running, error: vm.walletOperationError)
+                    .padding(16)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(FrameKitStyle.surface, in: RoundedRectangle(cornerRadius: 16))
+            }
             if !vm.cardFlashLog.isEmpty {
                 CompactLogView(
                     title: "Flash Log (\(vm.cardFlashLog.count) lines)",
@@ -2412,6 +2418,13 @@ struct KeypadPreviewView: View {
                             .foregroundStyle(.white.opacity(0.85))
                     }
                 }
+            } else if let img = keys[btn.digit], vm.passcodeMode == .themeCreator && (vm.editorBackground != .original || vm.editorCornerRadius > 0) {
+                // The image already contains the editor's exact alpha/rounded shape.
+                // A second circular mask would hide the selected corner radius.
+                Image(uiImage: img)
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .frame(width: btnD, height: btnD)
             } else if let img = keys[btn.digit] {
                 // Custom theme button: Pure artwork without clashing superimposed text!
                 Circle()

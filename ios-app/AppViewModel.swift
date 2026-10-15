@@ -131,6 +131,8 @@ final class AppViewModel: ObservableObject {
     @Published var wallpaperOperationStage = ""
     @Published var wallpaperOperationError: String?
     @Published var isImportingWallpapers = false
+    @Published var walletOperationStage = ""
+    @Published var walletOperationError: String?
     private var decoratedCache: [String: UIImage] = [:]
     private var decoratedSignature = ""
 
@@ -755,6 +757,8 @@ final class AppViewModel: ObservableObject {
 
         syncTargetHostsToRust()
 
+        walletOperationStage = "Подготовка изображений карт…"
+        walletOperationError = nil
         cardFlashPhase    = .running
         cardFlashProgress = 0
         cardFlashLog.removeAll()
@@ -848,6 +852,7 @@ final class AppViewModel: ObservableObject {
                 }
 
                 await MainActor.run {
+                    self.walletOperationStage = "Обновление кэша карты…"
                     self.cardFlashLog.append("  ✅ Skins applied! Invalidating pass cache…")
                 }
 
@@ -880,15 +885,20 @@ final class AppViewModel: ObservableObject {
 
                 successCount += 1
                 await MainActor.run {
+                    self.walletOperationStage = "Обработано карт: \(i + 1) из \(selected.count)"
                     self.cardFlashLog.append("  ✅ Pass cache invalidated")
                     self.cardFlashProgress = Double(i + 1) / total
                 }
             }
 
             await MainActor.run {
+                let complete = successCount == selected.count
+                self.walletOperationStage = complete ? "Изображения карт записаны" : "Записано карт: \(successCount) из \(selected.count)"
+                self.walletOperationError = complete ? nil : "Не все карты обработаны. Проверь VPN, сопряжение и доступность карт; подробности — в журнале."
+                FrameKitFeedback.result(complete)
                 if successCount > 0 {
-                    self.cardFlashPhase = .done(ok: true)
-                    self.cardFlashProgress = 1.0
+                    self.cardFlashPhase = .done(ok: complete)
+                    self.cardFlashProgress = Double(successCount) / Double(selected.count)
                     self.cardFlashLog.append("🎉 \(successCount)/\(selected.count) card(s) flashed! Force-close Wallet app to see changes.")
                     self.successAlertMessage = "Skins successfully applied to \(successCount) card(s)!\n\nImportant Notes:\n• Force-close the Wallet app from the App Switcher (or reboot) to refresh cached card art.\n• Apple Card uses dynamic Metal GPU rendering and cannot have custom static artwork applied."
                     self.showSuccessAlert = true
@@ -962,6 +972,8 @@ final class AppViewModel: ObservableObject {
     }
 
     func clearAllCreator() {
+        editorBackground = .original
+        editorCornerRadius = 0
         posterImage = nil
         posterZoom = 1.0
         posterOffset = .zero
