@@ -268,3 +268,60 @@ final class PasscodeThemeImportTests: XCTestCase {
         XCTAssertNil(vm.loadedTheme)
     }
 }
+
+// Real SwiftUI screens mounted in a simulator window, never a web mock-up.
+// Synthetic images only; no pairing records, artwork or device secrets.
+@MainActor
+final class FrameKitDesignSnapshotTests: XCTestCase {
+    func testAllTabsAndCreatorAtPhoneSize() async throws {
+        let scene = try XCTUnwrap(UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }.first)
+        let previous = scene.windows.first(where: \.isKeyWindow)
+        let model = AppViewModel()
+        let host = UIHostingController(rootView: ContentView().environmentObject(model))
+        let window = UIWindow(windowScene: scene)
+        window.frame = CGRect(x: 0, y: 0, width: 393, height: 852)
+        window.overrideUserInterfaceStyle = .dark
+        window.rootViewController = host
+        window.makeKeyAndVisible()
+        defer { window.isHidden = true; previous?.makeKey() }
+
+        for tab in AppTab.allCases {
+            model.selectedTab = tab
+            try await capture(tab.rawValue, host: host, window: window)
+        }
+        model.selectedTab = .passcodeThemes
+        model.passcodeMode = .themeCreator
+        try await capture("Theme creator", host: host, window: window)
+
+        let keys = Dictionary(uniqueKeysWithValues: (0...9).map { digit in
+            (String(digit), UIGraphicsImageRenderer(size: CGSize(width: 120, height: 120)).image { context in
+                UIColor.systemBlue.setFill()
+                context.fill(CGRect(x: 0, y: 0, width: 120, height: 120))
+                (String(digit) as NSString).draw(at: CGPoint(x: 45, y: 38), withAttributes: [
+                    .font: UIFont.systemFont(ofSize: 36, weight: .semibold), .foregroundColor: UIColor.white
+                ])
+            })
+        })
+        model.passcodeMode = .applyTheme
+        model.loadedTheme = PasscodeThemeInfo(name: "Preview theme", filePath: "", fileCount: 10, keysPreview: keys)
+        try await capture("Imported theme", host: host, window: window)
+    }
+
+    private func capture(_ name: String, host: UIViewController, window: UIWindow) async throws {
+        window.setNeedsLayout()
+        window.layoutIfNeeded()
+        try await Task.sleep(nanoseconds: 900_000_000)
+        host.view.layoutIfNeeded()
+        let format = UIGraphicsImageRendererFormat()
+        format.scale = 1
+        var rendered = false
+        let image = UIGraphicsImageRenderer(size: window.bounds.size, format: format).image { _ in
+            rendered = window.drawHierarchy(in: window.bounds, afterScreenUpdates: true)
+        }
+        XCTAssertTrue(rendered)
+        let attachment = XCTAttachment(image: image)
+        attachment.name = "FrameKit UI - \(name)"
+        attachment.lifetime = .keepAlways
+        add(attachment)
+    }
+}
