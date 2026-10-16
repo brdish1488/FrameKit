@@ -516,7 +516,7 @@ struct FrameKitRouteRow: View {
 // MARK: - Single home navigation
 
 enum FrameKitDestination: Hashable {
-    case connection, themes, wallpapers, wallet, library
+    case connection, themes, wallpapers, wallet, library, test
 }
 
 struct FrameKitHomeView: View {
@@ -564,6 +564,12 @@ struct FrameKitHomeView: View {
                 NavigationLink(value: FrameKitDestination.wallet) {
                     homeRow("Карты Wallet", detail: "Изображения для карт", symbol: "creditcard")
                 }.accessibilityIdentifier("home.wallet")
+            }
+
+            Section {
+                NavigationLink(value: FrameKitDestination.test) {
+                    homeRow("Тест", detail: "Пока без функций", symbol: "flask")
+                }.accessibilityIdentifier("home.test")
             }
         }
         .modifier(FrameKitFormStyle())
@@ -613,6 +619,7 @@ struct ContentView: View {
                     case .wallpapers: TendiesView()
                     case .wallet: WalletCardsTab()
                     case .library: ThemeLibraryView()
+                    case .test: FrameKitTestView()
                     }
                 }
         }
@@ -642,6 +649,19 @@ struct ContentView: View {
             vm.showSuccessAlert = false
             vm.successAlertMessage = ""
         }
+    }
+}
+
+// MARK: - Test placeholder
+
+struct FrameKitTestView: View {
+    var body: some View {
+        Color.clear
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(Color(uiColor: .systemGroupedBackground))
+            .navigationTitle("Тест")
+            .navigationBarTitleDisplayMode(.inline)
+            .accessibilityIdentifier("test.placeholder")
     }
 }
 
